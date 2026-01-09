@@ -1,6 +1,6 @@
 services:
   mongo:
-    image: mongo:7
+    image: docker.io/library/mongo:7
     container_name: niji-mongo
     restart: unless-stopped
     ports:
@@ -9,7 +9,7 @@ services:
       - mongo_data:/data/db
 
   app:
-    image: node:20
+    image: docker.io/library/node:20
     container_name: niji-app
     working_dir: /app
     restart: unless-stopped
