@@ -35,8 +35,7 @@ services:
     restart: unless-stopped
     environment:
       - PORT=3001
-      # ブラウザから参照するので "http://VPS:3000" を env に入れる or .env.local をマウント
-      - NEXT_PUBLIC_API_BASE=http://mizunie2.colopp.net:3000
+      # - NEXT_PUBLIC_API_BASE=http://mizunie2.colopp.net:3000
     volumes:
       - ./web:/web
     command: ["bash", "-lc", "npm ci && npm run dev -- -p 3001 -H 0.0.0.0"]
