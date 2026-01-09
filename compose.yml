@@ -3,8 +3,8 @@ services:
     image: docker.io/library/mongo:7
     container_name: niji-mongo
     restart: unless-stopped
-    ports:
-      - "27017:27017"
+    # ports:
+    #   - "27017:27017"
     volumes:
       - mongo_data:/data/db
 
