@@ -1,0 +1,35 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: niji-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  app:
+    image: node:20
+    container_name: niji-app
+    working_dir: /app
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - MONGO_URL=mongodb://mongo:27017/niji
+      - DATA_DIR=/data
+      - GIT_REPO_DIR=/repo
+      - WEBHOOK_SECRET=change_me
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=500
+    volumes:
+      - ./app:/app
+      - ./data:/data:ro
+      - ./repo:/repo  # サーバ側でgit cloneして置く場所
+    command: ["bash", "-lc", "npm ci && node src/server.js"]
+    depends_on:
+      - mongo
+    ports:
+      - "3000:3000"
+
+volumes:
+  mongo_data:
