@@ -22,7 +22,7 @@ services:
       - ./app:/app
       - ./data:/data:ro
       - ./repo:/repo
-    command: ["bash", "-lc", "npm ci && node src/server.js"]
+    command: ["bash", "-lc", "npm ci && node src/server.cjs"]
     depends_on:
       - mongo
     ports:
