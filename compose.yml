@@ -3,14 +3,12 @@ services:
     image: docker.io/library/mongo:7
     container_name: niji-mongo
     restart: unless-stopped
-    # ports:
-    #   - "27017:27017"
     volumes:
       - mongo_data:/data/db
 
-  app:
+  api:
     image: docker.io/library/node:20
-    container_name: niji-app
+    container_name: niji-api
     working_dir: /app
     restart: unless-stopped
     environment:
@@ -18,18 +16,34 @@ services:
       - MONGO_URL=mongodb://mongo:27017/niji
       - DATA_DIR=/data
       - GIT_REPO_DIR=/repo
-      - WEBHOOK_SECRET=change_me
       - CHOKIDAR_USEPOLLING=true
       - CHOKIDAR_INTERVAL=500
     volumes:
       - ./app:/app
       - ./data:/data:ro
-      - ./repo:/repo  # サーバ側でgit cloneして置く場所
+      - ./repo:/repo
     command: ["bash", "-lc", "npm ci && node src/server.js"]
     depends_on:
       - mongo
     ports:
       - "3000:3000"
+
+  web:
+    image: docker.io/library/node:20
+    container_name: niji-web
+    working_dir: /web
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+      # ブラウザから参照するので "http://VPS:3000" を env に入れる or .env.local をマウント
+      - NEXT_PUBLIC_API_BASE=http://mizunie2.colopp.net:3000
+    volumes:
+      - ./web:/web
+    command: ["bash", "-lc", "npm ci && npm run dev -- -p 3001 -H 0.0.0.0"]
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
 
 volumes:
   mongo_data:
