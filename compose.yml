@@ -36,6 +36,7 @@ services:
     environment:
       - PORT=3001
       # - NEXT_PUBLIC_API_BASE=http://mizunie2.colopp.net:3000
+      - API_BASE_INTERNAL=http://api:3000
     volumes:
       - ./web:/web
     command: ["bash", "-lc", "npm ci && npm run dev -- -p 3001 -H 0.0.0.0"]
