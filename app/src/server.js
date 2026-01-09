@@ -75,9 +75,46 @@ async function ingestFile(filepath) {
 
   // end_scores は RecordGameEnd に居ることが多いので records を走査
   let endScores = null;
+
+  // 1) records 内の RecordGameEnd を最優先で探す（キー揺れに対応）
   for (const r of json?.records || []) {
-    if (r?.[".lq.RecordGameEnd"]?.end_scores) {
-      endScores = r[".lq.RecordGameEnd"].end_scores;
+    const ge = r?.[".lq.RecordGameEnd"];
+    if (!ge) continue;
+
+    // よくある候補を順に見る
+    endScores =
+      ge.end_scores ??
+      ge.endScores ??
+      ge.scores ??
+      ge.final_scores ??
+      ge.finalScores ??
+      null;
+
+    if (endScores) break;
+  }
+
+  // 2) head 側にも結果が入ってる場合があるのでフォールバック
+  if (!endScores) {
+    const h = json?.head;
+    endScores =
+      h?.end_scores ??
+      h?.endScores ??
+      h?.result?.end_scores ??
+      h?.result?.endScores ??
+      h?.result?.scores ??
+      null;
+  }
+
+  // 3) それでも無いなら「最後に出現する scores 系イベント」から推定（最後の局終了時点）
+  if (!endScores) {
+    for (let i = (json?.records || []).length - 1; i >= 0; i--) {
+      const r = json.records[i];
+      // hule の delta_scores / old_scores の組み合わせから「old+delta」を作れる場合がある
+      const hule = r?.[".lq.RecordHule"];
+      if (hule?.old_scores && hule?.delta_scores) {
+        endScores = hule.old_scores.map((v, idx) => v + hule.delta_scores[idx]);
+        break;
+      }
     }
   }
 

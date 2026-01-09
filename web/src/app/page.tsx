@@ -39,7 +39,7 @@ export default function Page() {
                 .map((p) => p.nickname)
                 .join(" / ")}
             </div>
-            <div>endScores: {(g.endScores ?? []).join(", ")}</div>
+            <div>endScores: {g.endScores ? g.endScores.join(", ") : "(not found)"}</div>
           </li>
         ))}
       </ul>
