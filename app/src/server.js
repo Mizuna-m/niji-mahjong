@@ -15,6 +15,14 @@ const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 const app = express();
 app.use(express.json({ limit: "50mb" }));
 
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
 // --- SSE clients ---
 const sseClients = new Set();
 function sseBroadcast(event, payload) {
