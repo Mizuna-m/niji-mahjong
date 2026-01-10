@@ -1,22 +1,18 @@
 # mappings/players.yaml
 players:
-  - id: p_example
-    displayName: "正式名サンプル"
-    image: "/images/livers/example.png"
-    tags: ["unitA", "fun"]
-  - id: p_same
-    displayName: "さめ。"
-  - id: p_nima
-    displayName: "垣崎にま"
-  - id: p_achicochi
-    displayName: "あちcoち"
-  - id: p_luckyteru
-    displayName: "LuckyTERUJong"
-  - id: p_inochi
-    displayName: "いのち。。"
-  - id: p_yokicchi
-    displayName: "よきっちマレー"
-  - id: p_honomiko
-    displayName: "ほのみこ"
-  - id: p_keita
-    displayName: "keitaさん"
+  # - id: p_example
+  #   displayName: "正式名サンプル"
+  #   image: "/images/livers/example.png"
+  #   tags: ["unitA", "fun"]
+  - id: YagurumaRine
+    displayName: "矢車りね"
+    image: "https://www.nijisanji.jp/api/image-proxy?url=https%3A%2F%2Fimages.microcms-assets.io%2Fassets%2F5694fd90407444338a64d654e407cc0e%2Fe11a9833e0224a1e9a17c5f3eacfda5b%2Fliver-face_Rine_Yaguruma.png&signature=cAahYnnqPR1H6wfY4YlEGgawkIX%2FIlCBWR5elRt2oNNuI563wYa6B5%2FMohkA62LEkr4gX9WgqrQXHlXwHfDJziJJjL6RxnFMevbwMXPZOL5aeqMT25slh4hgnVzYenqlnFmGPJ1dwlUMeOCdiXcFanp6%2BLMko292pze1k8QtfKHLcL4jW6EkUwHqmOpQXnvBIExcEIMg%2FWtMf5JKqigKDBqi4sQY03DkZ8aY1GhlPdk%2BJQqkx4qwrxBbVuETS2LoHEM%2BCgIEf2i3qG9tNvzeV9oJR%2FvwNGnqnCB5pgV1dVab%2FOt8lknsrbGV6f4wLEK%2FIcb1rncyUxCckGHsrYSk%2Fw%3D%3D&w=400&fm=webp"
+  - id: HoshikawaSara
+    displayName: "星川サラ"
+    image: "https://www.nijisanji.jp/api/image-proxy?url=https%3A%2F%2Fimages.microcms-assets.io%2Fassets%2F5694fd90407444338a64d654e407cc0e%2Febb66fde318b469a8ef5bff61312730a%2Fliver-face_Sara_Hoshikawa.png.webp&signature=EIDKKxZEFlieQQLsIJDw0ncmOpPodQSr43Tya6gC1I4uG2tt%2FcqCStcI8l%2Fqz43Os2DlGPENNFUkxqMqukh%2FQmpTL1xs6qRFhC4y1V099uewoFZXEoDpYxY0UZ1HaDyApn9MdOM%2BzISabKKrNlTtY5tiPDeDQdRPHamiTvxQ954xASKkdHgQX8XhzmnCCCAeANInVS1tOpej8LRyfOwwUjCun75IyxQLFrRtx0DSfTiggtinqrykEQUoX8zx4hzAdwpBgUGbKOxw0c3tmQBBjwldpV81powhWSZRzBrJi2dThXD0E9cs6MNIxEZ7rAOM4Z0GKVYHwn3N1rrXU6%2Foqg%3D%3D&w=400&fm=webp"
+  - id: MatsukaiMao
+    displayName: "魔使マオ"
+    image: "https://www.nijisanji.jp/api/image-proxy?url=https%3A%2F%2Fimages.microcms-assets.io%2Fassets%2F5694fd90407444338a64d654e407cc0e%2F247b9af77e04473091ee72acbf259fa4%2Fliver-face_Mao_Matsukai.png&signature=opJBwlVrzNQWn9MWDJ2XypmMTYygGXVIMMtjUJlIKQh4pdsoI9FxsDUSreeHM%2F2HwJtUo62gQ2iFEpLZKGhfs9MV1oqNG%2B4OYmTAt45SObWi4npbAkqj%2BljW3VtuNnHPYhIs%2FCjWkZ9r6wk8oe5Vbh5zRpRjFAExUs12623dtEUvfKok%2FWtnzRhAF5Uuz8NPHkz7vWrWBBc7g43N0qxoO2ou%2FUVgQ0vHJBGbUd55FhGrOUs%2FgohcNrALcipIt8TU326iB3bQvcsQyYRg7lCkgA6Zu2S0NCHVT02%2BR8a2OfWZEnTEl2NiIR5zeDgDu27xMOZ1dYaF10zqCr986C6Tvw%3D%3D&w=400&fm=webp"
+  - id: SorahoshiKirame
+    displayName: "空星きらめ"
+    image: "https://www.nijisanji.jp/api/image-proxy?url=https%3A%2F%2Fimages.microcms-assets.io%2Fassets%2F5694fd90407444338a64d654e407cc0e%2F61254e647cfb4edea5bb19a5f1ec90d7%2Fliver-face_Kirame_Sorahoshi.png.webp&signature=PhMCdvUGvbsHOKW75LHOe%2Fpy%2BYtewgJ36jluh8IwxPNKSSUFew67kp5Z6jgOC54V25%2B%2FiWN37QJYLC41Lb8BzqN8ZoA325vdg5pprPE8NgeOeAkAf21B2GUtXJx1RIUSiQw8t9xKGqpjHB5elAYC3sbQQ8CV%2Fg6zR%2FrpzJly4nEeOPmKnBLCgLcB%2Bj%2FHwMrdl%2FN6R9vEBj53dIlM%2BJZG66xQtHsAdK3plWpJr%2BNwBsgDpg3afKS6rkg5KpMcMVxdO6EJhZWKfxPljmqbhbaG6FeHZeIvgmVU2q2bOvE0%2BDNZpr3Sqpi%2BV%2B1fal6LE%2B%2FrOB1s%2B0oIO9AJh33nPEcQOg%3D%3D&w=400&fm=webp"

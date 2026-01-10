@@ -66,3 +66,43 @@ export async function fetchCumulative(limitGames = 2000, base = API_BASE_INTERNA
   const qs = new URLSearchParams({ limitGames: String(limitGames) });
   return fetchJson<CumulativeResponse>(`${base}/api/stats/cumulative?${qs.toString()}`);
 }
+// src/lib/api.ts
+import type {
+  TournamentMeta,
+  TournamentKpiResponse,
+  QualifierGroup,
+  QualifierGroupStandings,
+  WildcardResponse,
+} from "@/lib/types";
+
+async function apiGet<T>(base: string, path: string): Promise<T> {
+  const res = await fetch(`${base}${path}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+  return (await res.json()) as T;
+}
+
+/** tournament */
+export async function fetchTournamentMeta(base = API_BASE_INTERNAL) {
+  return apiGet<TournamentMeta>(base, "/api/tournament/meta");
+}
+
+export async function fetchTournamentKpi(
+  base = API_BASE_INTERNAL,
+  phase: "qualifier" | "finals" = "qualifier"
+) {
+  const q = new URLSearchParams({ phase });
+  return apiGet<TournamentKpiResponse>(base, `/api/tournament/kpi?${q.toString()}`);
+}
+
+export async function fetchQualifierGroups(base = API_BASE_INTERNAL) {
+  const r = await apiGet<{ groups: QualifierGroup[] }>(base, "/api/tournament/qualifier/groups");
+  return r.groups ?? [];
+}
+
+export async function fetchQualifierGroupStandings(base = API_BASE_INTERNAL, groupId: string) {
+  return apiGet<QualifierGroupStandings>(base, `/api/tournament/qualifier/groups/${encodeURIComponent(groupId)}/standings`);
+}
+
+export async function fetchQualifierWildcards(base = API_BASE_INTERNAL) {
+  return apiGet<WildcardResponse>(base, "/api/tournament/qualifier/wildcards");
+}

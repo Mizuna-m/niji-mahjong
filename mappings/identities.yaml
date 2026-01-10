@@ -1,20 +1,10 @@
 # mappings/identities.yaml
 identities:
-  - nickname: "雀魂のニックネーム"
-    playerId: p_example
-  - nickname: "さめ。"
-    playerId: p_same
-  - nickname: "垣崎にま"
-    playerId: p_nima
-  - nickname: "あちcoち"
-    playerId: p_achicochi
-  - nickname: "LuckyTERUJong"
-    playerId: p_luckyteru
-  - nickname: "いのち。。"
-    playerId: p_inochi
-  - nickname: "よきっちマレー"
-    playerId: p_yokicchi
-  - nickname: "ほのみこ"
-    playerId: p_honomiko
-  - nickname: "keitaさん"
-    playerId: p_keita
+  - nickname: "大矢車様"
+    playerId: YagurumaRine
+  - nickname: "強運神_星川様"
+    playerId: HoshikawaSara
+  - nickname: "天才マオ"
+    playerId: MatsukaiMao
+  - nickname: "空星きらめ"
+    playerId: SorahoshiKirame

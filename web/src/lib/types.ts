@@ -215,3 +215,80 @@ export type CumulativeResponse = {
   players: PlayerProfile[];
   series: CumulativeSeries[];
 };
+
+export type Seat = 0 | 1 | 2 | 3;
+
+export type EnrichedPlayer = {
+  seat: Seat;
+  nickname: string;
+  playerId: string | null;
+  displayName: string;
+  image?: string | null;
+  tags?: string[] | null;
+};
+
+/** tournament */
+export type TournamentMeta = {
+  season: string;
+  qualifier: {
+    groups: number;
+    wildcards: number;
+    mode: "tonpuu" | "hanchan";
+    umaoka: boolean;
+    startScore: number;
+    gamesPerPlayer: number;
+    wildcardRanking: { basis: "raw_final_score"; tieBreak: "seat_order" };
+  };
+  finals: { name: string; players: number; mode: "tonpuu" | "hanchan"; advance?: number | null; games?: number | null }[];
+};
+
+export type TournamentKpiResponse = {
+  phase: "qualifier" | "finals";
+  gamesTotal?: number | null;
+  gamesPlayed: number;
+  groupWinnersConfirmed?: number | null;
+  wildcardSlots?: number | null;
+  wildcardCut?: { rank: number; points: number; playerId?: string | null; displayName: string } | null;
+};
+
+export type QualifierGroup = { groupId: string; label: string };
+
+export type QualifierGroupStandingsTable = {
+  tableLabel?: string | null;
+  title?: string | null;
+  gameUuid: string;
+  startTime?: number | null;
+};
+
+export type QualifierGroupStandingsRow = {
+  playerId?: string | null;
+  displayName: string;
+  image?: string | null;
+  games: number; // qualifierは基本1
+  tournamentPoints: number; // 素点(finalScores)そのまま
+  place?: number | null; // ここは「1位=1」想定で扱う（+1しない）
+  isWinner: boolean;
+  qualified?: boolean | null;
+};
+
+export type QualifierGroupStandings = {
+  groupId: string;
+  tables: QualifierGroupStandingsTable[];
+  standings: QualifierGroupStandingsRow[];
+};
+
+export type WildcardCandidate = {
+  rank: number;
+  playerId?: string | null;
+  displayName: string;
+  image?: string | null;
+  points: number;
+  groupId?: string | null;
+  gameUuid?: string | null;
+};
+
+export type WildcardResponse = {
+  cutRank: number;
+  cutPoints?: number | null;
+  candidates: WildcardCandidate[];
+};
