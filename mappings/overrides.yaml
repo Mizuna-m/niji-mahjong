@@ -1,7 +1,8 @@
 # mappings/overrides.yaml（任意）
 games:
-  "250201-288ff140-b083-420f-bd04-369819aae2cf":
-    title: "神回"
-players:
-  p_example:
-    displayName: "表示名を上書き"
+  "260110-c9b13343-a102-40fd-82d9-0bcf9901424f":
+    phase: qualifier
+    groupId: A
+# players:
+#   p_example:
+#     displayName: "表示名を上書き"

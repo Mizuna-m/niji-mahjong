@@ -78,7 +78,7 @@ export default async function PlayerPage(props: { params: Promise<{ playerId: st
 
             {(data.nicknames?.length ?? 0) > 0 ? (
               <div className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-                別名：{data.nicknames.join(" / ")}
+                雀魂名：{data.nicknames.join(" / ")}
               </div>
             ) : null}
           </div>
