@@ -1,0 +1,22 @@
+# mappings/players.yaml
+players:
+  - id: p_example
+    displayName: "正式名サンプル"
+    image: "/images/livers/example.png"
+    tags: ["unitA", "fun"]
+  - id: p_same
+    displayName: "さめ。"
+  - id: p_nima
+    displayName: "垣崎にま"
+  - id: p_achicochi
+    displayName: "あちcoち"
+  - id: p_luckyteru
+    displayName: "LuckyTERUJong"
+  - id: p_inochi
+    displayName: "いのち。。"
+  - id: p_yokicchi
+    displayName: "よきっちマレー"
+  - id: p_honomiko
+    displayName: "ほのみこ"
+  - id: p_keita
+    displayName: "keitaさん"

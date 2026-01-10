@@ -1,0 +1,5 @@
+# mappings/tables.yaml
+tables:
+  - uuid: "250201-288ff140-b083-420f-bd04-369819aae2cf"
+    label: "予選A卓 第3試合"
+    note: "見どころメモ（任意）"

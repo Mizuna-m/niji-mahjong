@@ -15,13 +15,13 @@ services:
       - PORT=3000
       - MONGO_URL=mongodb://mongo:27017/niji
       - DATA_DIR=/data
-      - GIT_REPO_DIR=/repo
+      - MAPPINGS_DIR=/mappings
       - CHOKIDAR_USEPOLLING=true
       - CHOKIDAR_INTERVAL=500
     volumes:
       - ./app:/app
       - ./data:/data:ro
-      - ./repo:/repo
+      - ./mappings:/mappings:ro
     command: ["bash", "-lc", "npm ci && node src/server.cjs"]
     depends_on:
       - mongo
