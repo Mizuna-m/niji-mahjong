@@ -16,7 +16,7 @@ export default function RoundsTable({ game }: { game: DerivedGame }) {
 
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="border-b">
+          <thead className="border-b border-black/5 text-xs text-zinc-600 dark:border-white/10 dark:text-zinc-400">
             <tr className="opacity-80">
               <th className="py-2 pr-3">局</th>
               <th className="py-2 pr-3">結果</th>
@@ -37,7 +37,10 @@ export default function RoundsTable({ game }: { game: DerivedGame }) {
                 : "—";
 
               return (
-                <tr key={r.id.roundIndex} className="border-b last:border-b-0">
+                <tr
+                  key={r.id.roundIndex}
+                  className="border-b border-black/5 odd:bg-black/[0.02] hover:bg-black/[0.04] dark:border-white/10 dark:odd:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+                >
                   <td className="py-2 pr-3 font-mono">{roundLabel(r)}</td>
                   <td className="py-2 pr-3">{resultLabel}</td>
                   <td className="py-2 pr-3">{winners}</td>
