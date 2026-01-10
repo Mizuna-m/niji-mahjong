@@ -31,14 +31,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <NavLink href="/players" label="参加者" />
               <NavLink href="/ranking" label="予選状況" />
               <NavLink href="/stats/leaderboard" label="戦績順位" />
-              <NavLink href="/stats/cumulative" label="累積" />
             </nav>
           </header>
 
           <main className="mt-6">{children}</main>
 
           <footer className="mt-10 border-t border-black/5 pt-6 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-500">
-            Nijisanji Mahjong Cup 2026 Database
+            <p>Nijisanji Mahjong Cup 2026 Database</p>
+            <p>本サービスはデータの可視化を目的としたものであり、集計結果は不正確な場合があります。公式の情報を参照してください。</p>
+            <p>つくった人: <Link href="https://x.com/Mizuna_c">@Mizuna_c</Link></p>
           </footer>
         </div>
       </body>
