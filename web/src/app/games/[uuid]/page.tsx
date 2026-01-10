@@ -2,32 +2,11 @@ import type { GameDetailResponse } from "@/lib/types";
 import PlayerStatsCard from "@/components/PlayerStatsCard";
 import GameDetailHeader from "@/components/GameDetailHeader";
 import RoundsTableFriendly from "@/components/RoundsTableFriendly";
-import { headers } from "next/headers";
-
-/**
- * Server Component 用：
- * 現在のリクエストから origin を組み立てて絶対URLを作る
- */
-async function baseUrlFromHeaders(): Promise<string> {
-  const h = await headers();
-
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-
-  if (!host) {
-    throw new Error("Cannot determine request host for server fetch()");
-  }
-
-  return `${proto}://${host}`;
-}
+import { fetchGame } from "@/lib/api"; // ★追加
 
 async function fetchGameServer(uuid: string): Promise<GameDetailResponse> {
-  const base = await baseUrlFromHeaders();
-  const url = new URL(`/api/games/${encodeURIComponent(uuid)}`, base);
-
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`fetchGame failed: ${res.status}`);
-  return (await res.json()) as GameDetailResponse;
+  // ★Serverなら defaultBase() が API_BASE_INTERNAL を使う
+  return fetchGame(uuid);
 }
 
 export default async function GameDetailPage(
