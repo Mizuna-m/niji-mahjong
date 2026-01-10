@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { GameListItem } from "@/lib/types";
+import type { GameListItem, PlayerPill } from "@/lib/types";
 import { cardCls, pillCls } from "@/lib/ui";
 import PlayerPills from "@/components/PlayerPills";
 
@@ -11,6 +11,15 @@ function fmtTime(epochSec?: number) {
 export default function GameCard({ game }: { game: GameListItem }) {
   const dur =
     game.startTime && game.endTime ? Math.max(0, game.endTime - game.startTime) : 0;
+  const tableLabel =
+    (game.table as any)?.label ?? (game.table as any)?.name ?? null;
+  const title = game.title;
+  const pillPlayers: PlayerPill[] = game.players.map((p) => ({
+    seat: p.seat,
+    label: p.displayName ?? p.nickname,
+    playerId: p.playerId ?? undefined,
+    image: p.image ?? null,
+  }));
 
   return (
     <div className={`${cardCls} p-4`}>
@@ -28,7 +37,14 @@ export default function GameCard({ game }: { game: GameListItem }) {
           </div>
 
           <div className="mt-2 flex flex-wrap gap-2">
-            {game.table?.name ? <span className={pillCls}>{game.table.name}</span> : null}
+            {title ? (
+              <span className="inline-flex items-center rounded-full
+                              bg-amber-100 px-2 py-0.5 text-xs font-semibold
+                              text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                {title}
+              </span>
+            ) : null}
+            {tableLabel ? <span className={pillCls}>{tableLabel}</span> : null}
             {dur ? <span className={pillCls}>duration {Math.round(dur / 60)}m</span> : null}
           </div>
         </div>
@@ -42,7 +58,7 @@ export default function GameCard({ game }: { game: GameListItem }) {
       </div>
 
       <div className="mt-4">
-        <PlayerPills players={game.players ?? []} />
+        <PlayerPills players={pillPlayers} />
       </div>
     </div>
   );

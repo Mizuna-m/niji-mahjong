@@ -9,7 +9,7 @@ import type {
 } from "@/lib/types";
 
 export const API_BASE_PUBLIC =
-  process.env.NEXT_PUBLIC_API_BASE_PUBLIC ?? "http://localhost:3001";
+  process.env.NEXT_PUBLIC_API_BASE_PUBLIC ?? "http://localhost:3000";
 
 export const API_BASE_INTERNAL =
   process.env.API_BASE_INTERNAL ?? API_BASE_PUBLIC;

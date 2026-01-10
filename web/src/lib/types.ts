@@ -1,8 +1,18 @@
 export type ErrorResponse = { error: string; details?: unknown };
 
 export type TableInfo = {
-  name?: string | null;
-  id?: number | null;
+  uuid?: string | null;
+  label?: string | null;
+  note?: string | null;
+  name?: string | null; // 過去互換
+};
+
+export type ApiPlayer = {
+  seat: number;
+  nickname: string;
+  playerId?: string | null;
+  displayName?: string | null;
+  image?: string | null;
 };
 
 export type PlayerEnriched = {
@@ -21,13 +31,21 @@ export type PlayerProfile = {
   tags: string[];
 };
 
+export type PlayerPill = {
+  seat: number;
+  label: string;        // 表示名（必須）
+  playerId?: string;    // あればリンク
+  image?: string | null;
+};
+
 export type GameListItem = {
   uuid: string;
-  startTime: number; // epoch sec
-  endTime: number;   // epoch sec
-  table?: TableInfo;
-  players: PlayerEnriched[];
-  finalScores?: number[] | null; // 4 items
+  startTime: number;
+  endTime: number;
+  finalScores?: number[] | null;
+  title?: string | null;
+  table?: TableInfo | null;
+  players: ApiPlayer[];
 };
 
 export type GamesListResponse = { games: GameListItem[] };
