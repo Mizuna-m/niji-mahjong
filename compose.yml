@@ -35,11 +35,12 @@ services:
     restart: unless-stopped
     environment:
       - PORT=3001
-      # - NEXT_PUBLIC_API_BASE=http://mizunie2.colopp.net:3000
       - API_BASE_INTERNAL=http://api:3000
     volumes:
       - ./web:/web
-    command: ["bash", "-lc", "npm ci && npm run dev -- -p 3001 -H 0.0.0.0"]
+      - web_node_modules:/web/node_modules
+      - web_next_cache:/web/.next
+    command: ["bash", "-lc", "npm ci --include=dev && npm run dev -- -p 3001 -H 0.0.0.0"]
     ports:
       - "3001:3001"
     depends_on:
@@ -47,3 +48,5 @@ services:
 
 volumes:
   mongo_data:
+  web_node_modules:
+  web_next_cache:
