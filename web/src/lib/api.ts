@@ -1,3 +1,4 @@
+// src/lib/api.ts
 import type {
   CumulativeResponse,
   GameDetailResponse,
@@ -7,13 +8,34 @@ import type {
   PlayersListResponse,
   PlayerSummaryResponse,
   QualifierWinnersResponse,
+  TournamentMeta,
+  TournamentKpiResponse,
+  QualifierGroup,
+  QualifierGroupStandings,
+  WildcardResponse,
 } from "@/lib/types";
 
-export const API_BASE_PUBLIC =
-  process.env.NEXT_PUBLIC_API_BASE_PUBLIC ?? "http://localhost:3000";
+/**
+ * 実行環境ごとのベースURL戦略
+ *
+ * - Browser(Client Components):
+ *     base=""（相対URL） → Next.js rewrites (/api/* → api:3000)
+ * - Server(RSC/SSR):
+ *     API_BASE_INTERNAL=http://api:3000 を使える
+ */
+const API_BASE_INTERNAL =
+  process.env.API_BASE_INTERNAL && process.env.API_BASE_INTERNAL.trim()
+    ? process.env.API_BASE_INTERNAL
+    : "";
 
-export const API_BASE_INTERNAL =
-  process.env.API_BASE_INTERNAL ?? API_BASE_PUBLIC;
+/**
+ * Client/Server 共通の URL 組み立て
+ * base が空なら相対URLになる
+ */
+function join(base: string, path: string) {
+  if (!base) return path;
+  return `${base}${path}`;
+}
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -29,85 +51,124 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     let msg = `HTTP ${res.status}`;
     try {
       const j = await res.json();
-      msg = j?.error ? `${msg}: ${j.error}` : msg;
+      if (j?.error) msg += `: ${j.error}`;
     } catch {
       // ignore
     }
     throw new Error(msg);
   }
+
   return (await res.json()) as T;
 }
 
+/* =========================
+ * Games
+ * ========================= */
+
 export async function fetchGames(base = API_BASE_INTERNAL) {
-  return fetchJson<GamesListResponse>(`${base}/api/games`);
+  return fetchJson<GamesListResponse>(join(base, "/api/games"));
 }
 
 export async function fetchGame(uuid: string, base = API_BASE_INTERNAL) {
-  return fetchJson<GameDetailResponse>(`${base}/api/games/${encodeURIComponent(uuid)}`);
+  return fetchJson<GameDetailResponse>(
+    join(base, `/api/games/${encodeURIComponent(uuid)}`)
+  );
 }
+
+/* =========================
+ * Players
+ * ========================= */
 
 export async function fetchPlayers(base = API_BASE_INTERNAL) {
-  return fetchJson<PlayersListResponse>(`${base}/api/players`);
+  return fetchJson<PlayersListResponse>(join(base, "/api/players"));
 }
 
-export async function fetchPlayerSummary(playerId: string, base = API_BASE_INTERNAL) {
-  return fetchJson<PlayerSummaryResponse>(`${base}/api/players/${encodeURIComponent(playerId)}`);
+export async function fetchPlayerSummary(
+  playerId: string,
+  base = API_BASE_INTERNAL
+) {
+  return fetchJson<PlayerSummaryResponse>(
+    join(base, `/api/players/${encodeURIComponent(playerId)}`)
+  );
 }
+
+/* =========================
+ * Stats
+ * ========================= */
 
 export async function fetchLeaderboard(
   metric: LeaderboardMetric = "deltaTotal",
   limit = 50,
   base = API_BASE_INTERNAL
 ) {
-  const qs = new URLSearchParams({ metric, limit: String(limit) });
-  return fetchJson<LeaderboardResponse>(`${base}/api/stats/leaderboard?${qs.toString()}`);
+  const qs = new URLSearchParams({
+    metric,
+    limit: String(limit),
+  });
+  return fetchJson<LeaderboardResponse>(
+    join(base, `/api/stats/leaderboard?${qs.toString()}`)
+  );
 }
 
-export async function fetchCumulative(limitGames = 2000, base = API_BASE_INTERNAL) {
+export async function fetchCumulative(
+  limitGames = 2000,
+  base = API_BASE_INTERNAL
+) {
   const qs = new URLSearchParams({ limitGames: String(limitGames) });
-  return fetchJson<CumulativeResponse>(`${base}/api/stats/cumulative?${qs.toString()}`);
-}
-// src/lib/api.ts
-import type {
-  TournamentMeta,
-  TournamentKpiResponse,
-  QualifierGroup,
-  QualifierGroupStandings,
-  WildcardResponse,
-} from "@/lib/types";
-
-async function apiGet<T>(base: string, path: string): Promise<T> {
-  const res = await fetch(`${base}${path}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
-  return (await res.json()) as T;
+  return fetchJson<CumulativeResponse>(
+    join(base, `/api/stats/cumulative?${qs.toString()}`)
+  );
 }
 
-/** tournament */
+/* =========================
+ * Tournament
+ * ========================= */
+
 export async function fetchTournamentMeta(base = API_BASE_INTERNAL) {
-  return apiGet<TournamentMeta>(base, "/api/tournament/meta");
+  return fetchJson<TournamentMeta>(join(base, "/api/tournament/meta"));
 }
 
 export async function fetchTournamentKpi(
-  base = API_BASE_INTERNAL,
-  phase: "qualifier" | "finals" = "qualifier"
+  phase: "qualifier" | "finals" = "qualifier",
+  base = API_BASE_INTERNAL
 ) {
-  const q = new URLSearchParams({ phase });
-  return apiGet<TournamentKpiResponse>(base, `/api/tournament/kpi?${q.toString()}`);
+  const qs = new URLSearchParams({ phase });
+  return fetchJson<TournamentKpiResponse>(
+    join(base, `/api/tournament/kpi?${qs.toString()}`)
+  );
 }
+
+/* =========================
+ * Qualifier
+ * ========================= */
 
 export async function fetchQualifierGroups(base = API_BASE_INTERNAL) {
-  const r = await apiGet<{ groups: QualifierGroup[] }>(base, "/api/tournament/qualifier/groups");
-  return r.groups ?? [];
+  const res = await fetchJson<{ groups: QualifierGroup[] }>(
+    join(base, "/api/tournament/qualifier/groups")
+  );
+  return res.groups ?? [];
 }
 
-export async function fetchQualifierGroupStandings(base = API_BASE_INTERNAL, groupId: string) {
-  return apiGet<QualifierGroupStandings>(base, `/api/tournament/qualifier/groups/${encodeURIComponent(groupId)}/standings`);
+export async function fetchQualifierGroupStandings(
+  groupId: string,
+  base = API_BASE_INTERNAL
+) {
+  return fetchJson<QualifierGroupStandings>(
+    join(
+      base,
+      `/api/tournament/qualifier/groups/${encodeURIComponent(groupId)}/standings`
+    )
+  );
 }
 
 export async function fetchQualifierWildcards(base = API_BASE_INTERNAL) {
-  return apiGet<WildcardResponse>(base, "/api/tournament/qualifier/wildcards");
+  return fetchJson<WildcardResponse>(
+    join(base, "/api/tournament/qualifier/wildcards")
+  );
 }
 
 export async function fetchQualifierWinners(base = API_BASE_INTERNAL) {
-  return apiGet<QualifierWinnersResponse>(base, "/api/tournament/qualifier/winners");
+  return fetchJson<QualifierWinnersResponse>(
+    join(base, "/api/tournament/qualifier/winners")
+  );
 }
