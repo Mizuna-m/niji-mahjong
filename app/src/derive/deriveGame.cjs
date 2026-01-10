@@ -249,6 +249,7 @@ function summarizePlayers(players, rounds) {
       dealIn: 0,
       riichi: 0,
       calls: 0,
+      kan: 0,
       deltaTotal: 0,
     });
   }
@@ -267,6 +268,12 @@ function summarizePlayers(players, rounds) {
     for (const s of (rd.callsBy ?? [])) {
       if (!isSeat(s)) continue;
       bySeat.get(s).calls++;
+    }
+    
+    // カン
+    for (const s of (rd.kansBy ?? [])) {   // ★追加
+      if (!isSeat(s)) continue;
+      bySeat.get(s).kan++;
     }
 
     // 収支（delta）
@@ -366,6 +373,7 @@ function deriveGame(paifu) {
         dora: r?.dora ?? r?.doras ?? null,
         riichiBy: [],
         callsBy: [],
+        kansBy: [],
       };
 
       roundIndex++;
@@ -383,10 +391,23 @@ function deriveGame(paifu) {
     }
 
     // ---- calls ----
-    if (name === ".lq.RecordChiPengGang" || name === ".lq.RecordAnGangAddGang") {
+    if (name === ".lq.RecordChiPengGang") {
       const r = payload;
       const seat = r?.seat;
-      if (isSeat(seat)) current.callsBy.push(seat);
+      if (isSeat(seat)) {
+        current.callsBy.push(seat);
+        if (isKanFromChiPengGangPayload(r)) current.kansBy.push(seat);  // ★追加
+      }
+      continue;
+    }
+
+    if (name === ".lq.RecordAnGangAddGang") {
+      const r = payload;
+      const seat = r?.seat;
+      if (isSeat(seat)) {
+        current.callsBy.push(seat); // カンも鳴きに含めるならここは入れる（既存のcallsの意味を維持）
+        current.kansBy.push(seat);  // ★追加：これは確実にカン
+      }
       continue;
     }
 
@@ -435,6 +456,32 @@ function deriveGame(paifu) {
     parseNotes: notes.length ? notes : undefined,
   };
 }
+
+function isKanFromChiPengGangPayload(r) {
+  // format variations:
+  // - r.type (number) 例: 0=chi,1=peng,2=gang ... のようなパターンが多い
+  // - r.type (string) "gang" / "minggang" / "ankan" / "kakan" など
+  const t =
+    r?.type ??
+    r?.op_type ??
+    r?.chi_peng_gang?.type ??
+    r?.chiPengGang?.type ??
+    null;
+
+  // number codes (best-effort)
+  if (typeof t === "number") {
+    // よくある: 2=明槓, 3=加槓 等（環境でズレる可能性があるので広めに）
+    return t >= 2;
+  }
+
+  if (typeof t === "string") {
+    const s = t.toLowerCase();
+    return s.includes("gang") || s.includes("kan") || s.includes("kakan") || s.includes("ankan");
+  }
+
+  return false;
+}
+
 
 module.exports = {
   deriveGame,

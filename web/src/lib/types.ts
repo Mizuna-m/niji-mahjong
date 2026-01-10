@@ -174,16 +174,28 @@ export type LeaderboardMetric =
   | "dealIn"
   | "riichi"
   | "calls"
+  | "kan"
   | "rounds"
   | "top1";
 
 export type LeaderboardRow = {
   rank: number;
-  playerId: string;
+  playerId: string | null;
   displayName: string;
   image?: string | null;
+
   value: number;
-  games: number;
+  games?: number;
+  rounds?: number;
+
+  // ついでに「この人の簡易成績」も返ってくるなら受ける（表示は任意）
+  deltaTotal?: number;
+  hule?: number;
+  dealIn?: number;
+  riichi?: number;
+  calls?: number;
+  kan?: number;
+  top1?: number;
 };
 
 export type LeaderboardResponse = {
