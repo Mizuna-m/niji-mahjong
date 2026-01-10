@@ -108,6 +108,7 @@ export type DerivedGame = {
 
 export type GameDetailResponse = {
   uuid: string;
+  title?: string | null;      // ← 追加
   table: TableInfo;
   derived: DerivedGame;
 };

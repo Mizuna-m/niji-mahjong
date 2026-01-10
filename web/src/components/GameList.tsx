@@ -49,14 +49,10 @@ export default function GameList() {
     <section>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-lg font-semibold">Games</div>
+          <div className="text-lg font-semibold">対局一覧</div>
           <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            SSE購読で自動更新（来たら再取得）
+            自動更新中
           </div>
-          <details className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
-            <summary className="cursor-pointer select-none">接続先</summary>
-            <div className="mt-2">API(public): {API_BASE_PUBLIC}</div>
-          </details>
         </div>
 
         <div className="flex items-center gap-2">
@@ -64,7 +60,7 @@ export default function GameList() {
             {sorted.length} 件
           </div>
           <button className={softBtnCls} onClick={reload}>
-            Reload
+            再読み込み
           </button>
         </div>
       </div>
