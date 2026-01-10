@@ -15,6 +15,7 @@ const { mountStreamRoutes } = require("./routes/stream.cjs");
 const { mountGameRoutes } = require("./routes/games.cjs");
 const { mountPlayersRoutes } = require("./routes/players.cjs");
 const { mountStatsRoutes } = require("./routes/stats.cjs");
+const { mountTournamentRoutes } = require("./routes/tournament.cjs");
 const mappings = require("./mappings/store.cjs");
 
 const PORT = Number(process.env.PORT || "3000");
@@ -61,6 +62,7 @@ async function main() {
   mountGameRoutes(app, { mongo });
   mountPlayersRoutes(app, { mongo, mappings });
   mountStatsRoutes(app, { mongo, mappings });
+  mountTournamentRoutes(app, { mongo });
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[api] listening on :${PORT}`);

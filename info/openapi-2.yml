@@ -1,0 +1,795 @@
+openapi: 3.0.3
+info:
+  title: Nijisanji Mahjong Tournament API
+  version: "0.1.0"
+  description: |
+    大会表示用API。牌譜取り込み済みゲーム(games_derived)に対して、YAML overlay（mappings）で
+    phase/groupId/matchId/title/tableLabel 等を付与し、フロントが推測不要な集計結果を返す。
+
+    大会ルール（予選）:
+    - 1グループ4人、東風戦1回のみ
+    - グループ1位が通過
+    - ワイルドカードは「各グループ1位を除外」した残りから、素点(finalScores)降順で上位4名
+    - 30000点持ちスタート（ただしランキング比較は素点そのまま）
+    - 同点は席順(seatが小さい)が上位
+servers:
+  - url: http://localhost:3000
+tags:
+  - name: system
+  - name: games
+  - name: players
+  - name: stats
+  - name: tournament
+
+paths:
+  /api/health:
+    get:
+      tags: [system]
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                required: [ok]
+
+  /api/stream:
+    get:
+      tags: [system]
+      summary: SSE stream for updates (ingest/mapping updates)
+      description: |
+        Server-Sent Events endpoint.
+        Events include:
+        - {"type":"hello"}
+        - {"type":"ingested","uuid":"..."}
+        - {"type":"mapping_updated"}
+      responses:
+        "200":
+          description: text/event-stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /api/games:
+    get:
+      tags: [games]
+      summary: List games (enriched)
+      description: |
+        取り込み済みゲーム一覧。レスポンスは overlay を適用した enriched 版。
+      responses:
+        "200":
+          description: Game list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  games:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GameListItem"
+                required: [games]
+
+  /api/games/{uuid}:
+    get:
+      tags: [games]
+      summary: Game detail (enriched)
+      parameters:
+        - $ref: "#/components/parameters/GameUuid"
+      responses:
+        "200":
+          description: Game detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameDetailResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/players:
+    get:
+      tags: [players]
+      summary: List known players from mappings (players.yaml)
+      description: |
+        参加者名簿（mappings/players.yaml）由来のプレイヤー一覧。
+      responses:
+        "200":
+          description: Players
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  players:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlayerProfile"
+                required: [players]
+
+  /api/players/{playerId}:
+    get:
+      tags: [players]
+      summary: Player summary page data
+      description: |
+        個別プレイヤーページ用。profile/nicknames/aggregate/rates/recentGames を返す。
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+      responses:
+        "200":
+          description: Player summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerSummaryResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/stats/leaderboard:
+    get:
+      tags: [stats]
+      summary: Generic leaderboard (non-tournament)
+      parameters:
+        - name: metric
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [deltaTotal, hule, tsumo, ron, dealIn, riichi, calls, top1]
+          description: Metric key
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaderboardResponse"
+
+  /api/stats/cumulative:
+    get:
+      tags: [stats]
+      summary: Cumulative series for charts (non-tournament)
+      parameters:
+        - name: limitGames
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5000
+            default: 2000
+      responses:
+        "200":
+          description: Cumulative series
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CumulativeResponse"
+
+  /api/tournament/meta:
+    get:
+      tags: [tournament]
+      summary: Tournament meta (fixed definition)
+      responses:
+        "200":
+          description: Tournament meta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentMeta"
+
+  /api/tournament/kpi:
+    get:
+      tags: [tournament]
+      summary: KPI summary for ranking page header
+      parameters:
+        - name: phase
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [qualifier, finals]
+            default: qualifier
+      responses:
+        "200":
+          description: KPI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentKpiResponse"
+
+  /api/tournament/qualifier/groups:
+    get:
+      tags: [tournament]
+      summary: List qualifier groups
+      responses:
+        "200":
+          description: Groups
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/QualifierGroup"
+                required: [groups]
+
+  /api/tournament/qualifier/groups/{groupId}/standings:
+    get:
+      tags: [tournament]
+      summary: Standings for a qualifier group (1 game fixed)
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Group standings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualifierGroupStandings"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/tournament/qualifier/wildcards:
+    get:
+      tags: [tournament]
+      summary: Wildcard rankings (winners excluded, score-based)
+      responses:
+        "200":
+          description: Wildcards
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WildcardResponse"
+
+  /api/tournament/finals/bracket:
+    get:
+      tags: [tournament]
+      summary: Finals bracket for graphical view
+      responses:
+        "200":
+          description: Bracket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinalsBracketResponse"
+
+components:
+  parameters:
+    GameUuid:
+      name: uuid
+      in: path
+      required: true
+      schema: { type: string }
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      schema: { type: string }
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+            required: [error]
+
+  schemas:
+    Seat:
+      type: integer
+      minimum: 0
+      maximum: 3
+      description: Seat index (0..3)
+
+    EnrichedPlayer:
+      type: object
+      properties:
+        seat: { $ref: "#/components/schemas/Seat" }
+        nickname:
+          type: string
+          description: Majsoul nickname (unique in this tournament)
+        playerId:
+          type: string
+          nullable: true
+          description: Optional stable player identifier from mappings (may be null if not mapped)
+        displayName:
+          type: string
+          description: Display name after overlay (defaults to nickname)
+        image:
+          type: string
+          nullable: true
+          description: Image URL (if provided by mappings)
+        tags:
+          type: array
+          nullable: true
+          items: { type: string }
+      required: [seat, nickname, playerId, displayName]
+
+    TableInfo:
+      type: object
+      nullable: true
+      properties:
+        uuid:
+          type: string
+          nullable: true
+        label:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+      description: Table/Match label info from mappings (tables.yaml or overrides)
+
+    GameListItem:
+      type: object
+      properties:
+        uuid: { type: string }
+        startTime: { type: integer, nullable: true, description: "Unix epoch seconds" }
+        endTime: { type: integer, nullable: true, description: "Unix epoch seconds" }
+        tableLabel: { type: string, nullable: true }
+        title: { type: string, nullable: true }
+        phase:
+          type: string
+          nullable: true
+          description: "qualifier | finals_r1 | finals_sf | finals_f | ..."
+        groupId:
+          type: string
+          nullable: true
+          description: "Qualifier group id (A..X) when phase=qualifier"
+        matchId:
+          type: string
+          nullable: true
+          description: "Match identifier in finals bracket"
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/EnrichedPlayer" }
+        finalScores:
+          type: array
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+          description: "Final raw scores (素点). Used for tournament ranking as-is."
+      required: [uuid, players, finalScores]
+
+    HuleEvent:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [tsumo, ron]
+        winners:
+          type: array
+          items: { $ref: "#/components/schemas/Seat" }
+        loser:
+          allOf: [{ $ref: "#/components/schemas/Seat" }]
+          nullable: true
+        han: { type: integer, nullable: true }
+        fu: { type: integer, nullable: true }
+        point: { type: integer, nullable: true }
+        deltaScores:
+          type: array
+          nullable: true
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+      required: [kind, winners]
+
+    RoundId:
+      type: object
+      properties:
+        roundIndex: { type: integer }
+        chang: { type: integer, nullable: true, description: "0=東,1=南,2=西,3=北" }
+        ju: { type: integer, nullable: true, description: "0-based kyoku index within chang" }
+        honba: { type: integer, nullable: true }
+        riichiSticks: { type: integer, nullable: true }
+      required: [roundIndex]
+
+    Round:
+      type: object
+      properties:
+        id: { $ref: "#/components/schemas/RoundId" }
+        roundName: { type: string, nullable: true, description: "例: 東1局" }
+        roundNameLong: { type: string, nullable: true, description: "例: 東1局 1本場" }
+        startScores:
+          type: array
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+        dealer: { $ref: "#/components/schemas/Seat" }
+        dora:
+          type: array
+          nullable: true
+          items: { type: integer }
+        riichiBy:
+          type: array
+          items: { $ref: "#/components/schemas/Seat" }
+        callsBy:
+          type: array
+          items: { $ref: "#/components/schemas/Seat" }
+        hule:
+          $ref: "#/components/schemas/HuleEvent"
+        endScores:
+          type: array
+          nullable: true
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+      required: [id, startScores, dealer, riichiBy, callsBy]
+
+    PlayerStat:
+      type: object
+      properties:
+        seat: { $ref: "#/components/schemas/Seat" }
+        nickname: { type: string }
+        rounds: { type: integer }
+        hule: { type: integer }
+        tsumo: { type: integer }
+        ron: { type: integer }
+        dealIn: { type: integer }
+        riichi: { type: integer }
+        calls: { type: integer }
+        deltaTotal: { type: integer }
+        playerId: { type: string, nullable: true }
+        displayName: { type: string }
+        image: { type: string, nullable: true }
+      required: [seat, nickname, rounds, hule, tsumo, ron, dealIn, riichi, calls, deltaTotal, displayName]
+
+    DerivedGame:
+      type: object
+      properties:
+        uuid: { type: string }
+        startTime: { type: integer, nullable: true }
+        endTime: { type: integer, nullable: true }
+        rule:
+          type: object
+          properties:
+            raw: { type: object, nullable: true }
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/EnrichedPlayer" }
+        finalScores:
+          type: array
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+        rounds:
+          type: array
+          items: { $ref: "#/components/schemas/Round" }
+        playerStats:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerStat" }
+        parseNotes:
+          type: array
+          nullable: true
+          items: { type: string }
+      required: [uuid, players, rounds, playerStats]
+
+    GameDetailResponse:
+      type: object
+      properties:
+        uuid: { type: string }
+        table: { $ref: "#/components/schemas/TableInfo" }
+        derived: { $ref: "#/components/schemas/DerivedGame" }
+      required: [uuid, derived]
+
+    PlayerProfile:
+      type: object
+      properties:
+        playerId: { type: string }
+        displayName: { type: string }
+        image: { type: string, nullable: true }
+        tags:
+          type: array
+          nullable: true
+          items: { type: string }
+      required: [playerId, displayName]
+
+    PlayerAggregate:
+      type: object
+      properties:
+        games: { type: integer }
+        rounds: { type: integer }
+        deltaTotal: { type: integer }
+        hule: { type: integer }
+        tsumo: { type: integer }
+        ron: { type: integer }
+        dealIn: { type: integer }
+        riichi: { type: integer }
+        calls: { type: integer }
+        top1: { type: integer }
+      required: [games, rounds, deltaTotal, hule, tsumo, ron, dealIn, riichi, calls, top1]
+
+    PlayerRates:
+      type: object
+      properties:
+        avgDeltaPerGame: { type: number }
+        riichiPerRound: { type: number }
+        dealInPerRound: { type: number }
+        hulePerRound: { type: number }
+        topRate: { type: number }
+      required: [avgDeltaPerGame, riichiPerRound, dealInPerRound, hulePerRound, topRate]
+
+    RecentOpponent:
+      type: object
+      properties:
+        seat: { $ref: "#/components/schemas/Seat" }
+        nickname: { type: string }
+        playerId: { type: string, nullable: true }
+        displayName: { type: string }
+        image: { type: string, nullable: true }
+      required: [nickname, displayName]
+
+    RecentGameItem:
+      type: object
+      description: |
+        プレイヤー個別ページ用の直近対局カード情報。
+        delta は derived.playerStats.deltaTotal（通常はそのゲーム内の合計増減）。
+      properties:
+        uuid: { type: string }
+        startTime: { type: integer, nullable: true }
+        delta: { type: integer }
+        place:
+          type: integer
+          nullable: true
+          description: "順位。大会ルールにより同点は席順が先(seat小)が上位。"
+        tableLabel: { type: string, nullable: true }
+        title: { type: string, nullable: true }
+        opponents:
+          type: array
+          items: { $ref: "#/components/schemas/RecentOpponent" }
+      required: [uuid, delta, opponents]
+
+    PlayerSummaryResponse:
+      type: object
+      properties:
+        profile: { $ref: "#/components/schemas/PlayerProfile" }
+        nicknames:
+          type: array
+          items: { type: string }
+        aggregate: { $ref: "#/components/schemas/PlayerAggregate" }
+        rates: { $ref: "#/components/schemas/PlayerRates" }
+        recentGames:
+          type: array
+          items: { $ref: "#/components/schemas/RecentGameItem" }
+      required: [profile, nicknames, aggregate, rates, recentGames]
+
+    LeaderboardRow:
+      type: object
+      properties:
+        rank: { type: integer }
+        playerId: { type: string, nullable: true }
+        displayName: { type: string }
+        image: { type: string, nullable: true }
+        value: { type: number }
+      required: [rank, displayName, value]
+
+    LeaderboardResponse:
+      type: object
+      properties:
+        metric: { type: string }
+        metricLabel: { type: string }
+        leaderboard:
+          type: array
+          items: { $ref: "#/components/schemas/LeaderboardRow" }
+      required: [metric, metricLabel, leaderboard]
+
+    CumulativePoint:
+      type: object
+      properties:
+        x: { type: integer, description: "Game index" }
+        y: { type: number, description: "Cumulative value" }
+        uuid: { type: string, nullable: true }
+        startTime: { type: integer, nullable: true }
+      required: [x, y]
+
+    CumulativeSeries:
+      type: object
+      properties:
+        playerId: { type: string, nullable: true }
+        displayName: { type: string }
+        points:
+          type: array
+          items: { $ref: "#/components/schemas/CumulativePoint" }
+      required: [displayName, points]
+
+    CumulativeResponse:
+      type: object
+      properties:
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerProfile" }
+        games: { type: integer }
+        series:
+          type: array
+          items: { $ref: "#/components/schemas/CumulativeSeries" }
+      required: [players, games, series]
+
+    TournamentMeta:
+      type: object
+      properties:
+        season: { type: string }
+        qualifier:
+          type: object
+          properties:
+            groups: { type: integer }
+            wildcards: { type: integer }
+            mode: { type: string, enum: [tonpuu, hanchan] }
+            umaoka: { type: boolean }
+            startScore: { type: integer, description: "Starting score (持ち点)" }
+            gamesPerPlayer: { type: integer }
+            wildcardRanking:
+              type: object
+              properties:
+                basis: { type: string, enum: [raw_final_score] }
+                tieBreak: { type: string, enum: [seat_order] }
+              required: [basis, tieBreak]
+          required: [groups, wildcards, mode, umaoka, startScore, gamesPerPlayer, wildcardRanking]
+        finals:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              players: { type: integer }
+              mode: { type: string, enum: [tonpuu, hanchan] }
+              advance: { type: integer, nullable: true }
+              games: { type: integer, nullable: true }
+            required: [name, players, mode]
+      required: [season, qualifier, finals]
+
+    TournamentKpiResponse:
+      type: object
+      properties:
+        phase: { type: string, enum: [qualifier, finals] }
+        gamesTotal: { type: integer, nullable: true }
+        gamesPlayed: { type: integer }
+        groupWinnersConfirmed: { type: integer, nullable: true }
+        wildcardSlots: { type: integer, nullable: true }
+        wildcardCut:
+          type: object
+          nullable: true
+          properties:
+            rank: { type: integer }
+            points: { type: integer }
+            playerId: { type: string, nullable: true }
+            displayName: { type: string }
+          required: [rank, points, displayName]
+      required: [phase, gamesPlayed]
+
+    QualifierGroup:
+      type: object
+      properties:
+        groupId: { type: string }
+        label: { type: string }
+      required: [groupId, label]
+
+    QualifierGroupStandingsRow:
+      type: object
+      properties:
+        playerId: { type: string, nullable: true }
+        displayName: { type: string }
+        image: { type: string, nullable: true }
+        games: { type: integer, description: "Always 1 in qualifier rule" }
+        tournamentPoints:
+          type: integer
+          description: |
+            予選・ワイルドカード比較に使う得点。
+            今回のルールでは「素点(finalScores)そのまま」なので、ここには finalScore が入る。
+        place:
+          type: integer
+          nullable: true
+          description: "順位。同点は seat が小さい方が上位。"
+        isWinner: { type: boolean }
+        qualified:
+          type: boolean
+          nullable: true
+          description: "Winner is true, others null (not determined/does not apply)"
+      required: [displayName, games, tournamentPoints, isWinner]
+
+    QualifierGroupStandings:
+      type: object
+      properties:
+        groupId: { type: string }
+        tables:
+          type: array
+          items:
+            type: object
+            properties:
+              tableLabel: { type: string, nullable: true }
+              title: { type: string, nullable: true }
+              gameUuid: { type: string }
+              startTime: { type: integer, nullable: true }
+            required: [gameUuid]
+        standings:
+          type: array
+          items: { $ref: "#/components/schemas/QualifierGroupStandingsRow" }
+      required: [groupId, tables, standings]
+
+    WildcardCandidate:
+      type: object
+      properties:
+        rank: { type: integer }
+        playerId: { type: string, nullable: true }
+        displayName: { type: string }
+        image: { type: string, nullable: true }
+        points:
+          type: integer
+          description: "素点そのまま（finalScores）"
+        groupId: { type: string, nullable: true }
+        gameUuid: { type: string, nullable: true }
+      required: [rank, displayName, points]
+
+    WildcardResponse:
+      type: object
+      properties:
+        cutRank: { type: integer }
+        cutPoints: { type: integer, nullable: true }
+        candidates:
+          type: array
+          items: { $ref: "#/components/schemas/WildcardCandidate" }
+      required: [cutRank, candidates]
+
+    FinalsMatch:
+      type: object
+      properties:
+        matchId: { type: string, nullable: true }
+        tableLabel: { type: string, nullable: true }
+        title: { type: string, nullable: true }
+        gameUuid: { type: string }
+        startTime: { type: integer, nullable: true }
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/EnrichedPlayer" }
+        result:
+          type: object
+          nullable: true
+          properties:
+            finalScores:
+              type: array
+              items: { type: integer }
+              minItems: 4
+              maxItems: 4
+      required: [gameUuid, players]
+
+    FinalsRound:
+      type: object
+      properties:
+        name: { type: string }
+        matches:
+          type: array
+          items: { $ref: "#/components/schemas/FinalsMatch" }
+      required: [name, matches]
+
+    FinalsBracketResponse:
+      type: object
+      properties:
+        rounds:
+          type: array
+          items: { $ref: "#/components/schemas/FinalsRound" }
+      required: [rounds]
