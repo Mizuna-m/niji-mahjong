@@ -1,0 +1,643 @@
+openapi: 3.0.3
+info:
+  title: Nijisanji Mahjong (Enjoy Tournament) API
+  version: 0.1.0
+  description: >
+    API for ingesting and presenting MahjongSoul paifu-derived games.
+    Provides enriched game list/detail with YAML overlay (players/tables/overrides),
+    player summary pages, and stats for graphical display.
+servers:
+  - url: http://localhost:3000
+    description: Local dev
+
+tags:
+  - name: Health
+  - name: Stream
+  - name: Games
+  - name: Players
+  - name: Stats
+
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+              examples:
+                ok:
+                  value: { ok: true }
+
+  /api/stream:
+    get:
+      tags: [Stream]
+      summary: Server-Sent Events stream
+      description: >
+        SSE endpoint. Keeps connection open and pushes events.
+        Events are JSON lines prefixed with `data: `, separated by blank line.
+        Typical event types:
+          - hello
+          - ingested (when a JSON paifu file is ingested/upserted)
+          - mapping_updated (when YAML overlay is reloaded)
+      responses:
+        "200":
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              examples:
+                hello:
+                  value: |
+                    data: {"type":"hello"}
+
+                ingested:
+                  value: |
+                    data: {"type":"ingested","uuid":"250201-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}
+
+                mapping_updated:
+                  value: |
+                    data: {"type":"mapping_updated"}
+
+  /api/games:
+    get:
+      tags: [Games]
+      summary: List games (enriched)
+      description: >
+        Returns all ingested games sorted by startTime ascending.
+        startTime/endTime are epoch seconds (multiply by 1000 for JS Date).
+        players are enriched via YAML overlay (playerId/displayName/image/tags).
+        table is enriched via YAML overlay if tables.yaml has a match.
+      responses:
+        "200":
+          description: List of games
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GamesListResponse"
+              examples:
+                example:
+                  value:
+                    games:
+                      - uuid: "250201-288ff140-b083-420f-bd04-369819aae2cf"
+                        startTime: 1738390359
+                        endTime: 1738392418
+                        table:
+                          uuid: "250201-288ff140-b083-420f-bd04-369819aae2cf"
+                          label: "予選A卓 第3試合"
+                          note: "見どころメモ"
+                        players:
+                          - seat: 0
+                            nickname: "さめ。"
+                            playerId: "p_same"
+                            displayName: "さめ。"
+                            image: "/images/livers/same.png"
+                            tags: ["enjoy"]
+                          - seat: 1
+                            nickname: "いのち。。"
+                            playerId: "p_inochi"
+                            displayName: "いのち。。"
+                        finalScores: [19600, 17100, 21500, 41800]
+
+  /api/games/{uuid}:
+    get:
+      tags: [Games]
+      summary: Get a game detail (enriched DerivedGame)
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string }
+          description: Game UUID (from paifu head.uuid or filename)
+      responses:
+        "200":
+          description: Game detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameDetailResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/players:
+    get:
+      tags: [Players]
+      summary: List players (from YAML overlay)
+      description: >
+        Lists players defined in mappings/players.yaml, after applying overrides.yaml (players section).
+        If mappings are empty/not mounted, this can return an empty list.
+      responses:
+        "200":
+          description: Players list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayersListResponse"
+
+  /api/players/{playerId}:
+    get:
+      tags: [Players]
+      summary: Player summary page data
+      description: >
+        Summary for a single player, including aggregate stats and recent games.
+        Player is identified by YAML playerId (not MahjongSoul account id).
+        nicknames are inferred from identities.yaml entries that point to this playerId.
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Player summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerSummaryResponse"
+        "404":
+          description: Player not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/stats/leaderboard:
+    get:
+      tags: [Stats]
+      summary: Leaderboard for a metric
+      description: >
+        Aggregates stats across all games, grouped by playerId (requires YAML mapping).
+        If identities/players overlay isn't loaded, leaderboard will be empty.
+      parameters:
+        - name: metric
+          in: query
+          required: false
+          schema:
+            type: string
+            default: deltaTotal
+            enum: [deltaTotal, hule, dealIn, riichi, calls, rounds, top1]
+          description: Metric to rank by
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+          description: Max number of rows
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaderboardResponse"
+
+  /api/stats/cumulative:
+    get:
+      tags: [Stats]
+      summary: Cumulative series for line chart
+      description: >
+        Returns cumulative delta series for each player (from YAML players list).
+        Intended for line chart: x=game index (chronological), y=cumulative delta.
+        If YAML players overlay isn't loaded, players/series will be empty.
+      parameters:
+        - name: limitGames
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 2000
+            minimum: 1
+            maximum: 5000
+          description: Max number of games to consider (sorted by startTime asc)
+      responses:
+        "200":
+          description: Cumulative series
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CumulativeResponse"
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+
+    # --- Common enriched objects ---
+    TableInfo:
+      type: object
+      nullable: true
+      properties:
+        uuid: { type: string }
+        label: { type: string }
+        note: { type: string, nullable: true }
+      required: [uuid, label]
+
+    PlayerEnriched:
+      type: object
+      properties:
+        seat:
+          type: integer
+          description: Seat index (0-3)
+          minimum: 0
+          maximum: 3
+          nullable: true
+        nickname:
+          type: string
+          description: MahjongSoul nickname (unique in this project)
+        playerId:
+          type: string
+          nullable: true
+          description: YAML playerId (null if not mapped via identities.yaml)
+        displayName:
+          type: string
+          description: Display name for UI (from YAML or fallback to nickname)
+        image:
+          type: string
+          nullable: true
+          description: Optional image path/URL
+        tags:
+          type: array
+          nullable: true
+          items: { type: string }
+      required: [nickname, displayName, playerId]
+
+    PlayerProfile:
+      type: object
+      properties:
+        playerId: { type: string }
+        displayName: { type: string }
+        image: { type: string, nullable: true }
+        tags:
+          type: array
+          nullable: true
+          items: { type: string }
+      required: [playerId, displayName]
+
+    # --- /api/games list ---
+    GameListItem:
+      type: object
+      properties:
+        uuid: { type: string }
+        startTime:
+          type: integer
+          description: Epoch seconds
+        endTime:
+          type: integer
+          description: Epoch seconds
+        table:
+          $ref: "#/components/schemas/TableInfo"
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerEnriched" }
+        finalScores:
+          type: array
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+          nullable: true
+      required: [uuid, startTime, endTime, players]
+
+    GamesListResponse:
+      type: object
+      properties:
+        games:
+          type: array
+          items: { $ref: "#/components/schemas/GameListItem" }
+      required: [games]
+
+    # --- /api/games/{uuid} detail ---
+    RuleInfo:
+      type: object
+      properties:
+        raw:
+          description: Raw rule config (currently may be null)
+          nullable: true
+      required: [raw]
+
+    HuleEvent:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [tsumo, ron]
+        winners:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 3
+        loser:
+          type: integer
+          minimum: 0
+          maximum: 3
+          nullable: true
+          description: Only set when kind=ron and inferred
+        han:
+          type: integer
+          nullable: true
+        fu:
+          type: integer
+          nullable: true
+        point:
+          type: integer
+          nullable: true
+        deltaScores:
+          type: array
+          nullable: true
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+      required: [kind, winners]
+
+    RoundId:
+      type: object
+      properties:
+        roundIndex: { type: integer }
+        honba: { type: integer }
+        riichiSticks: { type: integer }
+      required: [roundIndex, honba, riichiSticks]
+
+    Round:
+      type: object
+      properties:
+        id: { $ref: "#/components/schemas/RoundId" }
+        startScores:
+          type: array
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+        endScores:
+          type: array
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+          nullable: true
+        dealer:
+          type: integer
+          minimum: 0
+          maximum: 3
+        dora:
+          nullable: true
+        riichiBy:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 3
+        callsBy:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 3
+        hule:
+          $ref: "#/components/schemas/HuleEvent"
+          nullable: true
+      required: [id, startScores, dealer, riichiBy, callsBy]
+
+    PlayerStat:
+      type: object
+      properties:
+        seat:
+          type: integer
+          minimum: 0
+          maximum: 3
+        nickname: { type: string }
+        rounds: { type: integer }
+        hule: { type: integer }
+        tsumo: { type: integer }
+        ron: { type: integer }
+        dealIn: { type: integer }
+        riichi: { type: integer }
+        calls: { type: integer }
+        deltaTotal: { type: integer }
+        playerId:
+          type: string
+          nullable: true
+        displayName: { type: string }
+        image:
+          type: string
+          nullable: true
+      required:
+        [seat, nickname, rounds, hule, tsumo, ron, dealIn, riichi, calls, deltaTotal, playerId, displayName]
+
+    DerivedGame:
+      type: object
+      properties:
+        uuid: { type: string }
+        startTime:
+          type: integer
+          description: Epoch seconds
+        endTime:
+          type: integer
+          description: Epoch seconds
+        rule: { $ref: "#/components/schemas/RuleInfo" }
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerEnriched" }
+        finalScores:
+          type: array
+          items: { type: integer }
+          minItems: 4
+          maxItems: 4
+          nullable: true
+        rounds:
+          type: array
+          items: { $ref: "#/components/schemas/Round" }
+        playerStats:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerStat" }
+        parseNotes:
+          type: array
+          nullable: true
+          items: { type: string }
+      required: [uuid, startTime, endTime, rule, players, rounds, playerStats]
+
+    GameDetailResponse:
+      type: object
+      properties:
+        uuid: { type: string }
+        table:
+          $ref: "#/components/schemas/TableInfo"
+        derived:
+          $ref: "#/components/schemas/DerivedGame"
+      required: [uuid, table, derived]
+
+    # --- /api/players ---
+    PlayersListResponse:
+      type: object
+      properties:
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerProfile" }
+      required: [players]
+
+    # --- /api/players/{playerId} ---
+    PlayerAggregate:
+      type: object
+      properties:
+        games: { type: integer }
+        rounds: { type: integer }
+        deltaTotal: { type: integer }
+        hule: { type: integer }
+        tsumo: { type: integer }
+        ron: { type: integer }
+        dealIn: { type: integer }
+        riichi: { type: integer }
+        calls: { type: integer }
+        top1: { type: integer }
+      required: [games, rounds, deltaTotal, hule, tsumo, ron, dealIn, riichi, calls, top1]
+
+    PlayerRates:
+      type: object
+      properties:
+        avgDeltaPerGame: { type: number }
+        riichiPerRound: { type: number }
+        dealInPerRound: { type: number }
+        hulePerRound: { type: number }
+        topRate: { type: number }
+      required: [avgDeltaPerGame, riichiPerRound, dealInPerRound, hulePerRound, topRate]
+
+    PlayerRecentGame:
+      type: object
+      properties:
+        uuid: { type: string }
+        startTime:
+          type: integer
+          nullable: true
+          description: Epoch seconds
+        endTime:
+          type: integer
+          nullable: true
+          description: Epoch seconds
+        table:
+          $ref: "#/components/schemas/TableInfo"
+        delta:
+          type: integer
+          description: deltaTotal for this player in the game
+        rank:
+          type: integer
+          nullable: true
+          description: 1..4 if computable from finalScores (ties possible)
+      required: [uuid, delta, rank, table]
+
+    PlayerSummaryResponse:
+      type: object
+      properties:
+        profile: { $ref: "#/components/schemas/PlayerProfile" }
+        nicknames:
+          type: array
+          items: { type: string }
+          description: Nicknames mapped to this playerId (from identities.yaml)
+        aggregate: { $ref: "#/components/schemas/PlayerAggregate" }
+        rates: { $ref: "#/components/schemas/PlayerRates" }
+        recentGames:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerRecentGame" }
+      required: [profile, nicknames, aggregate, rates, recentGames]
+
+    # --- /api/stats/leaderboard ---
+    LeaderboardRow:
+      type: object
+      properties:
+        rank: { type: integer }
+        playerId: { type: string }
+        displayName: { type: string }
+        image: { type: string, nullable: true }
+        value:
+          type: number
+          description: Metric value (integer in practice, returned as number)
+        games: { type: integer }
+        rounds: { type: integer }
+        deltaTotal: { type: integer }
+        hule: { type: integer }
+        dealIn: { type: integer }
+        riichi: { type: integer }
+        calls: { type: integer }
+        top1: { type: integer }
+      required:
+        [rank, playerId, displayName, value, games, rounds, deltaTotal, hule, dealIn, riichi, calls, top1]
+
+    LeaderboardResponse:
+      type: object
+      properties:
+        metric:
+          type: string
+          enum: [deltaTotal, hule, dealIn, riichi, calls, rounds, top1]
+        metricLabel: { type: string }
+        leaderboard:
+          type: array
+          items: { $ref: "#/components/schemas/LeaderboardRow" }
+      required: [metric, metricLabel, leaderboard]
+
+    # --- /api/stats/cumulative ---
+    CumulativeGameIndex:
+      type: object
+      properties:
+        index: { type: integer }
+        uuid: { type: string }
+        startTime:
+          type: integer
+          nullable: true
+          description: Epoch seconds
+      required: [index, uuid, startTime]
+
+    CumulativePoint:
+      type: object
+      properties:
+        x:
+          type: integer
+          description: game index (0..N-1)
+        uuid: { type: string }
+        t:
+          type: integer
+          nullable: true
+          description: startTime epoch seconds
+        y:
+          type: number
+          description: cumulative delta total
+      required: [x, uuid, t, y]
+
+    CumulativeSeries:
+      type: object
+      properties:
+        playerId: { type: string }
+        displayName: { type: string }
+        image: { type: string, nullable: true }
+        points:
+          type: array
+          items: { $ref: "#/components/schemas/CumulativePoint" }
+      required: [playerId, displayName, points]
+
+    CumulativeResponse:
+      type: object
+      properties:
+        games:
+          type: array
+          items: { $ref: "#/components/schemas/CumulativeGameIndex" }
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerProfile" }
+        series:
+          type: array
+          items: { $ref: "#/components/schemas/CumulativeSeries" }
+      required: [games, players, series]
