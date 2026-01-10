@@ -26,6 +26,24 @@ function safeArray(x) {
   return Array.isArray(x) ? x : [];
 }
 
+function windLabel(chang) {
+  return ["東", "南", "西", "北"][Number(chang) ?? 0] ?? "東";
+}
+function kyokuLabel(chang, ju) {
+  const w = windLabel(chang);
+  const k = (Number(ju) ?? 0) + 1;
+  return `${w}${k}局`;
+}
+function kyokuLabelLong(chang, ju, ben, liqibang) {
+  const base = kyokuLabel(chang, ju);
+  const honba = Number(ben) ?? 0;
+  const riichi = Number(liqibang) ?? 0;
+  const parts = [];
+  if (honba) parts.push(`${honba}本場`);
+  // if (riichi) parts.push(`供託${riichi}`);
+  return parts.length ? `${base} ${parts.join(" ")}` : base;
+}
+
 /**
  * head.result / records / actions など複数箇所から最終点を抽出
  */
@@ -327,17 +345,25 @@ function deriveGame(paifu) {
 
       const r = payload;
       const startScores = normalizeScores(r?.scores);
-      const dealer = typeof r?.ju === "number" ? r.ju : 0;
+
+      const chang = typeof r?.chang === "number" ? r.chang : 0;
+      const ju = typeof r?.ju === "number" ? r.ju : 0;
+      const honba = Number(r?.ben) || 0;
+      const riichiSticks = Number(r?.liqibang) || 0;
 
       current = {
         id: {
           roundIndex,
-          honba: r?.ben ?? 0,
-          riichiSticks: r?.liqibang ?? 0,
+          chang,          // ★追加
+          ju,             // ★追加
+          honba,
+          riichiSticks,
         },
+        roundName: kyokuLabel(chang, ju),                       // ★追加（短）
+        roundNameLong: kyokuLabelLong(chang, ju, honba, riichiSticks), // ★追加（長）
         startScores,
-        dealer,
-        dora: r?.dora ?? undefined,
+        dealer: ju, // 親席は ju と一致（あなたのデータではそう出てる）
+        dora: r?.dora ?? r?.doras ?? null,
         riichiBy: [],
         callsBy: [],
       };

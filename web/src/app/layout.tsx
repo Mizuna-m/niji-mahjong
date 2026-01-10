@@ -22,25 +22,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="text-xl font-semibold tracking-tight">
-                にじさんじ麻雀杯（作業用）ログ
-              </div>
-              <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                Games / Players / Stats を新APIで表示
+                にじさんじ麻雀杯2026データベース
               </div>
             </div>
 
             <nav className="flex flex-wrap gap-2">
-              <NavLink href="/" label="Games" />
-              <NavLink href="/players" label="Players" />
-              <NavLink href="/stats/leaderboard" label="Leaderboard" />
-              <NavLink href="/stats/cumulative" label="Cumulative" />
+              <NavLink href="/" label="対局" />
+              <NavLink href="/players" label="参加者" />
+              <NavLink href="/stats/leaderboard" label="ランキング" />
+              <NavLink href="/stats/cumulative" label="累積" />
             </nav>
           </header>
 
           <main className="mt-6">{children}</main>
 
           <footer className="mt-10 border-t border-black/5 pt-6 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-500">
-            Nijisanji Mahjong API demo frontend
+            Nijisanji Mahjong Cup 2026 Database
           </footer>
         </div>
       </body>

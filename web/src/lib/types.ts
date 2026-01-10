@@ -57,9 +57,12 @@ export type RuleInfo = {
 
 export type RoundId = {
   roundIndex: number;
+  chang?: number;         // 追加: 0=東,1=南...
+  ju?: number;            // 追加: 0..3
   honba: number;
   riichiSticks: number;
 };
+
 
 export type HuleEvent = {
   kind: "tsumo" | "ron";
@@ -70,6 +73,8 @@ export type HuleEvent = {
 
 export type Round = {
   id: RoundId;
+  roundName?: string | null;      // 追加
+  roundNameLong?: string | null;  // 追加（例: "東1局 1本場"）
   hule?: HuleEvent | null;
 };
 

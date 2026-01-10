@@ -69,12 +69,12 @@ export default function GameList() {
         <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-900 dark:bg-red-950/40 dark:text-red-100">
           {err}
           <div className="mt-2 text-xs opacity-80">
-            SSEが落ちている/ Tailwind未適用などの場合は、layout と postcss を確認してください。
+            内部エラーが発生しました。時間をおいて「再読み込み」してください。
           </div>
         </div>
       ) : null}
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {sorted.map((g) => (
           <GameCard key={g.uuid} game={g} />
         ))}
@@ -82,13 +82,10 @@ export default function GameList() {
 
       {!sorted.length && !err ? (
         <div className="mt-6 rounded-2xl border border-black/5 bg-white/70 p-6 text-sm text-zinc-600 shadow-sm dark:border-white/10 dark:bg-zinc-900/60 dark:text-zinc-400">
-          No games.
+          対局データが見つかりませんでした。
         </div>
       ) : null}
 
-      <div className="mt-6 text-xs text-zinc-500 dark:text-zinc-500">
-        ヒント：プレイヤー詳細は <Link className="underline" href="/players">Players</Link> から。
-      </div>
     </section>
   );
 }

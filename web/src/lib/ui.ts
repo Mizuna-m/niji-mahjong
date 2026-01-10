@@ -9,3 +9,6 @@ export const softBtnCls =
 export const pillCls =
   "inline-flex items-center rounded-full border border-black/10 bg-white/60 px-2 py-0.5 text-xs " +
   "text-zinc-700 dark:border-white/10 dark:bg-zinc-950/20 dark:text-zinc-200";
+
+export const tablePillCls =
+  "rounded-full border border-blue-200/60 bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:border-blue-800/40 dark:bg-blue-900/20 dark:text-blue-200";
