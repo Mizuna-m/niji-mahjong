@@ -55,6 +55,9 @@ function mountTournamentKpiRoutes(app, { mongo }) {
       });
     }
 
+    const GROUPS_TOTAL = 24;
+    const WILDCARDS_SLOTS = 4;
+
     const docs = await mongo.colDerived
       .find({}, { projection: { _id: 0, players: 1, finalScores: 1 } })
       .toArray();
@@ -92,18 +95,17 @@ function mountTournamentKpiRoutes(app, { mongo }) {
       return a.seat - b.seat;
     });
 
-    const wildcardSlots = 4;
-    const cut = wildcardPool[wildcardSlots] ?? null;
+    const cut = wildcardPool[WILDCARDS_SLOTS - 1] ?? null;
 
     res.json({
       phase: "qualifier",
-      gamesTotal: null, // 未確定なので null
+      gamesTotal: GROUPS_TOTAL,
       gamesPlayed,
-      groupWinnersConfirmed: groupWinners.length,
-      wildcardSlots,
+      groupWinnersConfirmed: gamesPlayed,
+      wildcardSlots: WILDCARDS_SLOTS,
       wildcardCut: cut
         ? {
-            rank: wildcardSlots,
+            rank: WILDCARDS_SLOTS,
             points: cut.score,
             playerId: cut.playerId,
             displayName: cut.displayName,

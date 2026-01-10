@@ -21,6 +21,9 @@ games:
   "260110-277f0520-5b9b-402f-a6db-0dfa02e0fc4b":
     phase: qualifier
     groupId: G
+  "260110-33712217-3942-4316-9be5-1abe3472203f":
+    phase: qualifier
+    groupId: H
 
 # "uuid":
 #   title: "sticky_label"

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import GameCard from "@/components/GameCard";
-import { API_BASE_PUBLIC, fetchGames } from "@/lib/api";
+import { fetchGames } from "@/lib/api";
 import type { GameListItem } from "@/lib/types";
 import { softBtnCls } from "@/lib/ui";
 
@@ -20,7 +19,8 @@ export default function GameList() {
   async function reload() {
     try {
       setErr("");
-      const r = await fetchGames(API_BASE_PUBLIC);
+      // ★ Clientでは相対URLに寄せる（rewrites を効かせる）
+      const r = await fetchGames("");
       setGames(r.games ?? []);
     } catch (e: any) {
       setErr(e?.message ?? String(e));
@@ -33,12 +33,10 @@ export default function GameList() {
   }, []);
 
   useEffect(() => {
-    // SSE: backend `/api/stream`
-    // 仕様のイベント名が変わっても「何か来たらreload」で堅牢に運用
-    const es = new EventSource(`${API_BASE_PUBLIC}/api/stream`);
+    // ★ SSEも相対URL（rewrites経由で api:3000 へ）
+    const es = new EventSource("/api/stream");
     es.onmessage = () => reload();
     es.onerror = () => {
-      // SSEが落ちてもUIは維持（必要ならリトライ/トースト化）
       es.close();
     };
     return () => es.close();
@@ -85,7 +83,6 @@ export default function GameList() {
           対局データが見つかりませんでした。
         </div>
       ) : null}
-
     </section>
   );
 }

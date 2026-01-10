@@ -88,4 +88,15 @@ players:
   - id: RyuHari
     displayName: "リュ ハリ"
     image: "https://www.nijisanji.jp/api/image-proxy?url=https%3A%2F%2Fimages.microcms-assets.io%2Fassets%2F5694fd90407444338a64d654e407cc0e%2F07ac1f96aa024d99addc251cec709635%2Fliver-face_Hari_Ryu.png.webp&signature=p7IO6HoR%2BOikD5XtstUkeU6dTO9e31liaq7wSAneXoKYhI1JESKqTl7CbD3DbkyMAZuOedbN8aN67Ta4MY01BGmMcFXZtctNX1irXiMcojq74V%2FzHm04GOGD%2FRGtnfU1hrIYU0%2FLPACkj4uvQ%2BjS2swq9UucCkJybDn4PXBgnKsrIAT1h2jQNcCTVzjj19h2XPFzh8tjokm6T%2FcfsWHy78E6nOrp5RqvIkvCapDyxjECzuT1qNXIyOuvNP46smQUxVGU4x%2FMrpEAkaeWr5b0XdRhVPs2u4OzyxO7XFwW4yhsfO4QVFROI%2BEKhY%2FLUdroyqP0dXGYK9KlNfZhrxCWag%3D%3D&w=400&fm=webp"
-    
+  - id: ShirayukiTomoe
+    displayName: "白雪巴"
+    image: "https://www.nijisanji.jp/api/image-proxy?url=https%3A%2F%2Fimages.microcms-assets.io%2Fassets%2F5694fd90407444338a64d654e407cc0e%2Fd5a34b5834374e50a289198280aad119%2Fliver-face_Tomoe_Shirayuki.png&signature=ERKMdTJ9TXemhaO%2FdPlBjrpB9QWNhdAwf0aztV7tRQj0Gl9ogm0aZU9lJa1r1xM1xCohCyvgwqG3qph5K6RpLl7SCZJY3UspbkdSndKVrHpV5ZIh25FNyy9ety1W%2FfoUfAnFcQ4yeo5sXjIEL2ivRFSJeACG8B63MFb6fx0ytlD0f1dQQ2yKmmO2BjefiFM5NvlMViD6fz8LBqcDZEvCtCBENrfvnuaA9P1RHyDJQ8FvefH6W1C%2F0lBuC6IUmoNRafeDeGbKuyum0kpXfWWwqOgkYwZIehFVxZ%2F%2F2YmRKKcGKLBfyCuK4hJAIUyVWwEpzP2zfCrjJUiPH6JvdBV%2FtA%3D%3D&w=400&fm=webp"
+  - id: ShibuyaHajime
+    displayName: "渋谷ハジメ"
+    image: "https://www.nijisanji.jp/api/image-proxy?url=https%3A%2F%2Fimages.microcms-assets.io%2Fassets%2F5694fd90407444338a64d654e407cc0e%2F48d793b718984df8b9f81ade7f0b8a5a%2Fliver-face_Hajime_Shibuya.png.webp&signature=qzJlVS9f4Q0FKylqFvvuVN%2BPSLTnRL%2FaAQkX%2FsvKWNAWB7%2B4Xefpu%2FqEuGvY3Pfts%2FcmVmmx12GNVf2iQGyXqu7ulfXEXvjOIRYKdosf3FqcEZ5oCPtnywozWvNPqoBSOs3uk%2F5C4XRopzNPhqVYgSufvtK9OldzMJOP%2BxRvVU3aJtVmSSM66WUP%2BKUvy5VX4Sp%2BwuDSrwTkN%2FpVVnqh9%2B%2BhK3LVElOmVUyXLgHnEqT3Eec3pRnRRlOxHRnMv%2BppNWvIsXPrqCcMFpwj0lQxr%2FSYv4CotG3JFLYlDxgdfX3Fk2tydmrkO%2BrL1P%2FofGbTRY8QcDPIYzdITsVETq5DEQ%3D%3D&w=400&fm=webp"
+  - id: HanaMacchia
+    displayName: "ハナ マキア"
+    image: "https://www.nijisanji.jp/api/image-proxy?url=https%3A%2F%2Fimages.microcms-assets.io%2Fassets%2F5694fd90407444338a64d654e407cc0e%2Ffb0035ee1e374daf9f57a6589468dced%2Fliver-face_Hana_Macchia.png&signature=qaPNa9mZBYcadevRu5K3RYpEKLaUhkUAMJtDpP3sRyyJeWpDo%2FlcEkYsa7m4uYroL4pkimkF1GyaWMOPTNKRkN1FG7xnL9kpkt0zaDnlNrQbZ6etjce26zOkpUtikMnbBq2dfF9hmt7eNDWFl0Nu8xVnUM4yTaDO7B3mH%2FSRCR5GGMPCTmvVJmf6%2FNWDRhOzfdqNHk9Up0EKCT%2BGf%2BNCtBY7pxCnGu0es0d1nKZjux1cAjgGSmNYkwzDqnM%2FTDJ3pwq%2FwFXZzBhgaNsGJXjMsLw7CxOWJStqwcP7sl5QlZhR9SczW%2F8CcuGDb6RZT8XfsXKr75AYOLEFoqxRNT%2FhOQ%3D%3D&w=400&fm=webp"
+  - id: Fumi
+    displayName: "フミ"
+    image: "https://www.nijisanji.jp/api/image-proxy?url=https%3A%2F%2Fimages.microcms-assets.io%2Fassets%2F5694fd90407444338a64d654e407cc0e%2F2aecf7a5282e4a349ead29f8f8e525f1%2Fliver-face_Fumi.png.webp&signature=RkFYShpos2LZiUj3OVCvQYWRrcgChhmWQRqV2wYeoAm1mLClFJbeUQ1YlCbvAr914yi6PSpmNdeUXldlYTouF2HDWXU3lBDrsi54voNlxY3oVKoCdrQKLQ6sxhKVvxDALqlaQ1JiURq1JYk5qb%2Fvuv0NC8gpb5hIXs1PjYaUAvLWFmKgD2ztGgXJHjJWdJIjWxlpq6hk6adEQMEnCMzGdWh07BQpR4XZNv5%2BqSfmlRDRzKlzzrriFFgpmJHkHFNeQ8ea7CChAYKANSKFnys2DUoCzdEyM7H8UR4hxUZYwUPIK9uLEYQxnWgnEwQaGsw4vifp%2Bjz6cf%2FNscp9fmhaFw%3D%3D&w=400&fm=webp"
