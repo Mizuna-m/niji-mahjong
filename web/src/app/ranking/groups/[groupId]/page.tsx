@@ -23,7 +23,7 @@ export default async function GroupPage(props: { params: Promise<{ groupId: stri
   let data: Awaited<ReturnType<typeof fetchQualifierGroupStandings>> | null = null;
 
   try {
-    data = await fetchQualifierGroupStandings(undefined, groupId);
+    data = await fetchQualifierGroupStandings({ groupId });
   } catch (e: any) {
     err = e?.message ?? String(e);
   }

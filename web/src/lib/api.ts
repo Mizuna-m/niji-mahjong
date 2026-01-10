@@ -22,7 +22,7 @@ import type {
  *     相対URL "/api/..." を使って rewrites を必ず通す（CORS回避、ホスト差分も吸収）
  * - Server(RSC/SSR):
  *     API_BASE_INTERNAL=http://api:3000 があればそれを使う（高速・確実）
- *     無ければ相対URL（ただし環境によっては相対fetchが失敗するので、その場合は page側で絶対URLを組む）
+ *     無ければ相対URL
  */
 const API_BASE_INTERNAL =
   process.env.API_BASE_INTERNAL && process.env.API_BASE_INTERNAL.trim()
@@ -32,15 +32,30 @@ const API_BASE_INTERNAL =
 // Clientでは絶対に相対に寄せる（ブラウザから http://api:3000 は見えない）
 const API_BASE_CLIENT = "";
 
-// 実行環境判定（Next で browser は window がある）
+/** 実行環境判定（Next で browser は window がある） */
 function defaultBase() {
   return typeof window === "undefined" ? API_BASE_INTERNAL : API_BASE_CLIENT;
 }
 
-/** base が空なら相対URLになる */
-function join(base: string, path: string) {
+/**
+ * base + path を安全に結合する
+ * - base が空なら /api/... の相対URL
+ * - base が壊れてたら（例: "H"）相対URLへフォールバック
+ */
+function buildUrl(base: string, path: string) {
+  if (!path.startsWith("/")) path = `/${path}`;
+
+  // 相対URL（推奨）
   if (!base) return path;
-  return `${base}${path}`;
+
+  // base が "http://..." "https://..." 以外なら壊れてる可能性が高いので相対へ
+  if (!/^https?:\/\//i.test(base)) return path;
+
+  try {
+    return new URL(path, base).toString();
+  } catch {
+    return path;
+  }
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -67,17 +82,22 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** options を共通化 */
+type ApiOpts = { base?: string };
+
 /* =========================
  * Games
  * ========================= */
 
-export async function fetchGames(base = defaultBase()) {
-  return fetchJson<GamesListResponse>(join(base, "/api/games"));
+export async function fetchGames(opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
+  return fetchJson<GamesListResponse>(buildUrl(base, "/api/games"));
 }
 
-export async function fetchGame(uuid: string, base = defaultBase()) {
+export async function fetchGame(uuid: string, opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
   return fetchJson<GameDetailResponse>(
-    join(base, `/api/games/${encodeURIComponent(uuid)}`)
+    buildUrl(base, `/api/games/${encodeURIComponent(uuid)}`)
   );
 }
 
@@ -85,13 +105,15 @@ export async function fetchGame(uuid: string, base = defaultBase()) {
  * Players
  * ========================= */
 
-export async function fetchPlayers(base = defaultBase()) {
-  return fetchJson<PlayersListResponse>(join(base, "/api/players"));
+export async function fetchPlayers(opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
+  return fetchJson<PlayersListResponse>(buildUrl(base, "/api/players"));
 }
 
-export async function fetchPlayerSummary(playerId: string, base = defaultBase()) {
+export async function fetchPlayerSummary(playerId: string, opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
   return fetchJson<PlayerSummaryResponse>(
-    join(base, `/api/players/${encodeURIComponent(playerId)}`)
+    buildUrl(base, `/api/players/${encodeURIComponent(playerId)}`)
   );
 }
 
@@ -102,21 +124,25 @@ export async function fetchPlayerSummary(playerId: string, base = defaultBase())
 export async function fetchLeaderboard(
   metric: LeaderboardMetric = "deltaTotal",
   limit = 50,
-  base = defaultBase()
+  opts?: ApiOpts
 ) {
+  const base = opts?.base ?? defaultBase();
   const qs = new URLSearchParams({
     metric,
     limit: String(limit),
   });
+
   return fetchJson<LeaderboardResponse>(
-    join(base, `/api/stats/leaderboard?${qs.toString()}`)
+    buildUrl(base, `/api/stats/leaderboard?${qs.toString()}`)
   );
 }
 
-export async function fetchCumulative(limitGames = 2000, base = defaultBase()) {
+export async function fetchCumulative(limitGames = 2000, opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
   const qs = new URLSearchParams({ limitGames: String(limitGames) });
+
   return fetchJson<CumulativeResponse>(
-    join(base, `/api/stats/cumulative?${qs.toString()}`)
+    buildUrl(base, `/api/stats/cumulative?${qs.toString()}`)
   );
 }
 
@@ -124,14 +150,13 @@ export async function fetchCumulative(limitGames = 2000, base = defaultBase()) {
  * Tournament
  * ========================= */
 
-export async function fetchTournamentMeta(base = defaultBase()) {
-  return fetchJson<TournamentMeta>(join(base, "/api/tournament/meta"));
+export async function fetchTournamentMeta(opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
+  return fetchJson<TournamentMeta>(buildUrl(base, "/api/tournament/meta"));
 }
 
 /**
- * 事故防止のため「オブジェクト引数」に変更
- * - 旧: fetchTournamentKpi(phase, base)
- * - 新: fetchTournamentKpi({ phase, base })
+ * 事故防止のため「オブジェクト引数」
  */
 export async function fetchTournamentKpi(opts?: {
   phase?: "qualifier" | "finals";
@@ -140,8 +165,9 @@ export async function fetchTournamentKpi(opts?: {
   const phase = opts?.phase ?? "qualifier";
   const base = opts?.base ?? defaultBase();
   const qs = new URLSearchParams({ phase });
+
   return fetchJson<TournamentKpiResponse>(
-    join(base, `/api/tournament/kpi?${qs.toString()}`)
+    buildUrl(base, `/api/tournament/kpi?${qs.toString()}`)
   );
 }
 
@@ -149,30 +175,61 @@ export async function fetchTournamentKpi(opts?: {
  * Qualifier
  * ========================= */
 
-export async function fetchQualifierGroups(base = defaultBase()) {
+export async function fetchQualifierGroups(opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
   const res = await fetchJson<{ groups: QualifierGroup[] }>(
-    join(base, "/api/tournament/qualifier/groups")
+    buildUrl(base, "/api/tournament/qualifier/groups")
   );
   return res.groups ?? [];
 }
 
-export async function fetchQualifierGroupStandings(groupId: string, base = defaultBase()) {
+/**
+ * fetchQualifierGroupStandings は “引数順事故” が起きやすいのでオブジェクト引数に統一。
+ *
+ * ✅ 正:
+ *   fetchQualifierGroupStandings({ groupId })
+ *   fetchQualifierGroupStandings({ groupId, base: "http://localhost:3001" })
+ *
+ * 互換:
+ *   fetchQualifierGroupStandings(groupId)
+ *   fetchQualifierGroupStandings(groupId, base)
+ */
+export async function fetchQualifierGroupStandings(
+  arg1:
+    | { groupId: string; base?: string }
+    | string,
+  arg2?: string
+) {
+  const groupId =
+    typeof arg1 === "string" ? arg1 : arg1.groupId;
+
+  const base =
+    typeof arg1 === "string"
+      ? (arg2 ?? defaultBase())
+      : (arg1.base ?? defaultBase());
+
+  if (!groupId) {
+    throw new Error("groupId is required");
+  }
+
   return fetchJson<QualifierGroupStandings>(
-    join(
+    buildUrl(
       base,
       `/api/tournament/qualifier/groups/${encodeURIComponent(groupId)}/standings`
     )
   );
 }
 
-export async function fetchQualifierWildcards(base = defaultBase()) {
+export async function fetchQualifierWildcards(opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
   return fetchJson<WildcardResponse>(
-    join(base, "/api/tournament/qualifier/wildcards")
+    buildUrl(base, "/api/tournament/qualifier/wildcards")
   );
 }
 
-export async function fetchQualifierWinners(base = defaultBase()) {
+export async function fetchQualifierWinners(opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
   return fetchJson<QualifierWinnersResponse>(
-    join(base, "/api/tournament/qualifier/winners")
+    buildUrl(base, "/api/tournament/qualifier/winners")
   );
 }

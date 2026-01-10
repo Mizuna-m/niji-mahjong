@@ -24,6 +24,18 @@ games:
   "260110-33712217-3942-4316-9be5-1abe3472203f":
     phase: qualifier
     groupId: H
+  "260110-1e9a3d81-730a-4243-b171-c9c0ddae0fc0":
+    phase: qualifier
+    groupId: I
+  "260110-18f102b9-5ed2-40f0-b891-dea09b15d14a":
+    phase: qualifier
+    groupId: J
+  "260110-050e08a1-6bae-4eb2-b807-b5083423ba88":
+    phase: qualifier
+    groupId: K
+  "260110-b1da01cc-551f-4a16-b582-770fe5cbce16":
+    phase: qualifier
+    groupId: L
 
 # "uuid":
 #   title: "sticky_label"
