@@ -1,68 +1,89 @@
 // app/src/services/enrich.cjs
-const { applyGameOverride, resolvePlayerByNickname, resolveTableByUuid } = require("../mappings/overlay.cjs");
+const {
+  resolvePlayerByNickname,
+  resolveTableByUuid,
+  applyGameOverride,
+} = require("../mappings/overlay.cjs");
 
-function enrichGameListItem(doc) {
-  const uuid = doc.uuid;
-  const table = resolveTableByUuid(uuid);
+function enrichPlayers(players) {
+  if (!Array.isArray(players)) return [];
+  return players.map((p) => {
+    const nickname = p?.nickname ?? "";
+    const resolved = resolvePlayerByNickname(nickname);
 
-  const players = (doc.players || []).map((p) => {
-    const r = resolvePlayerByNickname(p?.nickname ?? "");
     return {
-      seat: p?.seat ?? null,
-      nickname: p?.nickname ?? "",
-      playerId: r.playerId,
-      displayName: r.displayName,
-      image: r.image,
-      tags: r.tags,
+      seat: typeof p?.seat === "number" ? p.seat : null,
+      nickname,
+      // overlay
+      playerId: resolved.playerId ?? null,
+      displayName: resolved.displayName ?? nickname,
+      image: resolved.image ?? null,
+      tags: resolved.tags ?? null,
     };
   });
-
-  const base = {
-    uuid,
-    startTime: doc.startTime ?? null,
-    endTime: doc.endTime ?? null,
-    table,
-    players,
-    finalScores: doc.finalScores ?? null,
-  };
-
-  return applyGameOverride(uuid, base);
 }
 
-function enrichGameDetail(doc) {
-  const uuid = doc.uuid;
-  const table = resolveTableByUuid(uuid);
-
-  const derived = doc.derived || {};
-  const players = (derived.players || []).map((p) => {
-    const r = resolvePlayerByNickname(p?.nickname ?? "");
-    return {
-      seat: p?.seat ?? null,
-      nickname: p?.nickname ?? "",
-      playerId: r.playerId,
-      displayName: r.displayName,
-      image: r.image,
-      tags: r.tags,
-    };
-  });
-
-  const playerStats = (derived.playerStats || []).map((st) => {
-    const r = resolvePlayerByNickname(st?.nickname ?? "");
+function enrichPlayerStats(playerStats) {
+  if (!Array.isArray(playerStats)) return [];
+  return playerStats.map((st) => {
+    const nickname = st?.nickname ?? "";
+    const resolved = resolvePlayerByNickname(nickname);
     return {
       ...st,
-      playerId: r.playerId,
-      displayName: r.displayName,
-      image: r.image,
+      playerId: resolved.playerId ?? null,
+      displayName: resolved.displayName ?? nickname,
+      image: resolved.image ?? null,
+      tags: resolved.tags ?? null,
     };
   });
-
-  const base = {
-    uuid,
-    table,
-    derived: { ...derived, players, playerStats },
-  };
-
-  return applyGameOverride(uuid, base);
 }
 
-module.exports = { enrichGameListItem, enrichGameDetail };
+function enrichDerivedGame(derived) {
+  if (!derived || typeof derived !== "object") return derived;
+  const out = { ...derived };
+
+  if (Array.isArray(out.players)) out.players = enrichPlayers(out.players);
+  if (Array.isArray(out.playerStats)) out.playerStats = enrichPlayerStats(out.playerStats);
+
+  // rounds は量が多いので、ここでは基本そのまま（必要なら winners/loser の表示名も付けられる）
+  return out;
+}
+
+function enrichTable(uuid) {
+  if (!uuid) return null;
+  return resolveTableByUuid(uuid); // {uuid,label,note} or null
+}
+
+/**
+ * /api/games の1行（軽量）
+ */
+function enrichGameListItem(doc) {
+  const base = {
+    uuid: doc?.uuid ?? null,
+    startTime: doc?.startTime ?? null,
+    endTime: doc?.endTime ?? null,
+    table: enrichTable(doc?.uuid),
+    players: enrichPlayers(doc?.players),
+    finalScores: Array.isArray(doc?.finalScores) ? doc.finalScores : null,
+  };
+
+  return applyGameOverride(base.uuid, base);
+}
+
+/**
+ * /api/games/:uuid （詳細）
+ */
+function enrichGameDetail(doc) {
+  const base = {
+    uuid: doc?.uuid ?? null,
+    table: enrichTable(doc?.uuid),
+    derived: enrichDerivedGame(doc?.derived),
+  };
+
+  return applyGameOverride(base.uuid, base);
+}
+
+module.exports = {
+  enrichGameListItem,
+  enrichGameDetail,
+};

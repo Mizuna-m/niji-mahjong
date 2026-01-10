@@ -3,7 +3,7 @@ const fs = require("fs");
 const chokidar = require("chokidar");
 const { loadOverlayFromMappingsDir, MAPPINGS_DIR } = require("./loader.cjs");
 
-function startMappingsWatcher({ sse }) {
+function startMappingsWatcher({ sse, onReload }) {
   console.log("[watch:mappings] MAPPINGS_DIR =", MAPPINGS_DIR);
 
   if (!fs.existsSync(MAPPINGS_DIR)) {
@@ -21,26 +21,29 @@ function startMappingsWatcher({ sse }) {
 
   const reload = () => {
     try {
+      if (typeof onReload === "function") return onReload();
       loadOverlayFromMappingsDir(sse);
     } catch (e) {
       console.error("[mappings] reload failed:", e?.message || e);
     }
   };
 
+  const isYaml = (p) => p.endsWith(".yaml") || p.endsWith(".yml");
+
   watcher.on("add", (p) => {
-    if (!p.endsWith(".yaml") && !p.endsWith(".yml")) return;
+    if (!isYaml(p)) return;
     console.log("[watch:mappings:add]", p);
     reload();
   });
 
   watcher.on("change", (p) => {
-    if (!p.endsWith(".yaml") && !p.endsWith(".yml")) return;
+    if (!isYaml(p)) return;
     console.log("[watch:mappings:change]", p);
     reload();
   });
 
   watcher.on("unlink", (p) => {
-    if (!p.endsWith(".yaml") && !p.endsWith(".yml")) return;
+    if (!isYaml(p)) return;
     console.log("[watch:mappings:unlink]", p);
     reload();
   });

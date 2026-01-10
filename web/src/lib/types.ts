@@ -134,19 +134,30 @@ export type PlayerAggregate = {
 };
 
 export type PlayerRates = {
-  huleRate: number;
-  dealInRate: number;
-  riichiRate: number;
-  top1Rate: number;
+  hulePerRound: number;
+  dealInPerRound: number;
+  riichiPerRound: number;
+  topRate: number;
+};
+
+export type PlayerRecentOpponent = {
+  seat: number;
+  nickname: string;
+  playerId?: string | null;
+  displayName: string;
+  image?: string | null;
 };
 
 export type PlayerRecentGame = {
   uuid: string;
   startTime: number;
-  endTime: number;
   delta: number;
   place?: number | null;
-  finalScores?: number[] | null;
+
+  tableLabel?: string | null;
+  title?: string | null;
+
+  opponents: PlayerRecentOpponent[];
 };
 
 export type PlayerSummaryResponse = {

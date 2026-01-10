@@ -13,8 +13,9 @@ const { startDataWatcher } = require("./ingest/watcher.cjs");
 const { mountHealthRoutes } = require("./routes/health.cjs");
 const { mountStreamRoutes } = require("./routes/stream.cjs");
 const { mountGameRoutes } = require("./routes/games.cjs");
-const { mountPlayerRoutes } = require("./routes/players.cjs");
+const { mountPlayersRoutes } = require("./routes/players.cjs");
 const { mountStatsRoutes } = require("./routes/stats.cjs");
+const mappings = require("./mappings/store.cjs");
 
 const PORT = Number(process.env.PORT || "3000");
 
@@ -49,14 +50,17 @@ async function main() {
 
   // Watchers
   startDataWatcher({ mongo, sse });
-  startMappingsWatcher({ sse });
+  startMappingsWatcher({
+    sse,
+    onReload: () => loadOverlayFromMappingsDir(sse),
+  });
 
   // Routes (thin)
   mountHealthRoutes(app);
   mountStreamRoutes(app, { sse });
   mountGameRoutes(app, { mongo });
-  mountPlayerRoutes(app, { mongo });
-  mountStatsRoutes(app, { mongo });
+  mountPlayersRoutes(app, { mongo, mappings });
+  mountStatsRoutes(app, { mongo, mappings });
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[api] listening on :${PORT}`);
