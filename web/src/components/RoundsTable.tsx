@@ -1,23 +1,25 @@
-// web/src/components/RoundsTable.tsx
-import { DerivedGame, RoundSummary } from "@/lib/types";
+import type { DerivedGame, Round } from "@/lib/types";
+import { cardCls } from "@/lib/ui";
 
 function seatName(game: DerivedGame, seat: number) {
-  return game.players?.find((p) => p.seat === seat)?.nickname ?? `seat${seat}`;
+  return game.players?.find((p) => p.seat === seat)?.displayName
+    ?? game.players?.find((p) => p.seat === seat)?.nickname
+    ?? `seat${seat}`;
 }
 
-function roundLabel(r: RoundSummary) {
+function roundLabel(r: Round) {
   return `#${r.id.roundIndex + 1} (honba ${r.id.honba}, riichi ${r.id.riichiSticks})`;
 }
 
 export default function RoundsTable({ game }: { game: DerivedGame }) {
   return (
-    <div className="rounded-2xl border p-4 shadow-sm">
+    <div className={`${cardCls} p-4`}>
       <div className="text-lg font-semibold">局結果</div>
 
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-black/5 text-xs text-zinc-600 dark:border-white/10 dark:text-zinc-400">
-            <tr className="opacity-80">
+            <tr>
               <th className="py-2 pr-3">局</th>
               <th className="py-2 pr-3">結果</th>
               <th className="py-2 pr-3">勝者</th>
@@ -32,9 +34,7 @@ export default function RoundsTable({ game }: { game: DerivedGame }) {
               const loser = typeof h?.loser === "number" ? seatName(game, h.loser) : "";
               const delta = Array.isArray(h?.deltaScores) ? h.deltaScores.join(" / ") : "";
 
-              const resultLabel = h
-                ? (h.kind === "tsumo" ? "ツモ" : "ロン")
-                : "—";
+              const resultLabel = h ? (h.kind === "tsumo" ? "ツモ" : "ロン") : "—";
 
               return (
                 <tr
@@ -52,12 +52,6 @@ export default function RoundsTable({ game }: { game: DerivedGame }) {
           </tbody>
         </table>
       </div>
-
-      {Array.isArray(game.parseNotes) && game.parseNotes.length ? (
-        <div className="mt-3 text-xs opacity-70">
-          notes: {game.parseNotes.join(" | ")}
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -1,6 +1,1 @@
 @import "tailwindcss";
-
-/* 最低限の見栄え */
-html, body {
-  height: 100%;
-}
