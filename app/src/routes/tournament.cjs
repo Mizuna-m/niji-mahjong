@@ -1,154 +1,213 @@
 // app/src/routes/tournament.cjs
-// Tournament rule-aware APIs (qualifier KPI / standings / wildcards / finals bracket)
-//
-// Rules (as per request):
-// - Qualifier: 4 players per group, Tonpuu 1 game per group
-// - Qualifier winner: place=1 per group (tie-break by seat order)
-// - Wildcards: exclude group winners, then rank by raw final score (finalScores) desc
-// - Tie-break: seat asc (smaller seat wins ties)
-// - Start score: 30000 (informational; ranking uses raw final score as-is)
-
 const {
-  applyGameOverride,
   resolvePlayerByNickname,
   resolveTableByUuid,
+  applyGameOverride,
 } = require("../mappings/overlay.cjs");
 
-const QUALIFIER_GROUPS = Number(process.env.QUALIFIER_GROUPS || "24");
-const QUALIFIER_WILDCARDS = Number(process.env.QUALIFIER_WILDCARDS || "4");
-
-function clampInt(n, lo, hi) {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return lo;
-  return Math.max(lo, Math.min(hi, Math.trunc(x)));
+function safeNum(x) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
 }
 
-function normalizeScores(scores) {
-  if (!Array.isArray(scores)) return [0, 0, 0, 0];
-  const a = scores.slice(0, 4).map((v) => Number(v) || 0);
+function normalizeScores(s) {
+  if (!Array.isArray(s)) return [0, 0, 0, 0];
+  const a = s.slice(0, 4).map((v) => safeNum(v));
   while (a.length < 4) a.push(0);
   return a;
 }
 
 /**
- * Place calculation with tie-break by seat order.
- * - sort by score desc, seat asc
- * - assign unique places 1..4 (no shared rank even if tied)
+ * 予選: 同点は seat が小さい方が上（=席順が先）
+ * scores[seat] が最大の seat を返す
  */
-function placeBySeatWithSeatTiebreak(finalScores) {
-  const scores = normalizeScores(finalScores);
-  const arr = scores.map((score, seat) => ({ seat, score }));
+function winnerSeatByScores(scores) {
+  const s = normalizeScores(scores);
+  let bestSeat = 0;
+  let bestScore = s[0];
 
-  arr.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score; // score desc
-    return a.seat - b.seat; // seat asc (tie-break)
-  });
+  for (let seat = 1; seat < 4; seat++) {
+    const v = s[seat];
+    if (v > bestScore) {
+      bestScore = v;
+      bestSeat = seat;
+    } else if (v === bestScore) {
+      if (seat < bestSeat) bestSeat = seat;
+    }
+  }
+  return bestSeat;
+}
+
+/**
+ * 1,2,2,4 の competition ranking を seatごとに作る（同点は seat小さい方が上）
+ */
+function placementByScores(scores) {
+  const s = normalizeScores(scores);
+  const rows = [];
+  for (let seat = 0; seat < 4; seat++) rows.push({ seat, score: s[seat] });
+
+  // score desc, tie seat asc
+  rows.sort((a, b) => (b.score - a.score) || (a.seat - b.seat));
 
   const placeBySeat = Array(4).fill(null);
-  for (let i = 0; i < arr.length; i++) {
-    placeBySeat[arr[i].seat] = i + 1;
+  let place = 1;
+  for (let i = 0; i < rows.length; i++) {
+    if (i > 0 && rows[i].score !== rows[i - 1].score) place = i + 1;
+    placeBySeat[rows[i].seat] = place;
   }
   return placeBySeat;
 }
 
-function winnerSeat(finalScores) {
-  const placeBySeat = placeBySeatWithSeatTiebreak(finalScores);
-  for (let s = 0; s < 4; s++) if (placeBySeat[s] === 1) return s;
-  return null;
-}
-
 /**
- * Tournament points for qualifier/wildcards:
- * - raw final score (素点) as-is
+ * overlay（tables.yaml / overrides.yaml）から卓情報を組み立て
  */
-function calcTournamentPointsRaw(finalScore) {
-  return Number(finalScore) || 0;
-}
-
-function safeStr(x) {
-  return typeof x === "string" ? x : x == null ? "" : String(x);
-}
-
-function makeGroupLabel(groupId) {
-  // You can tweak here if you prefer "予選A卓" etc.
-  const g = safeStr(groupId);
-  return g ? `予選${g}グループ` : "予選グループ";
-}
-
-/**
- * Enrich a games_derived doc using overlay (players/tables/game overrides)
- * - returns a plain object (not mutating original doc)
- */
-function enrichGameFromDoc(doc) {
-  const uuid = doc?.uuid || doc?._id;
-  const startTime = doc?.startTime ?? null;
-  const endTime = doc?.endTime ?? null;
-
-  const playersBase = Array.isArray(doc?.players) ? doc.players : [];
-  const players = playersBase.map((p) => {
-    const seat = typeof p?.seat === "number" ? p.seat : null;
-    const nickname = safeStr(p?.nickname);
-    const ov = resolvePlayerByNickname(nickname);
-    return {
-      seat,
-      nickname,
-      playerId: ov?.playerId ?? null,
-      displayName: ov?.displayName ?? nickname,
-      image: ov?.image ?? null,
-      tags: ov?.tags ?? null,
-    };
-  });
-
-  // tables.yaml is by uuid (game uuid)
+function resolveGameMeta(uuid) {
   const table = resolveTableByUuid(uuid); // {uuid,label,note} or null
+  const base = { uuid, table };
+  const merged = applyGameOverride(uuid, base);
 
-  // base game object
-  const base = {
-    uuid,
-    startTime,
-    endTime,
-    players,
-    finalScores: normalizeScores(doc?.finalScores),
-    table: table
-      ? {
-          uuid: table.uuid ?? uuid,
-          label: table.label ?? null,
-          note: table.note ?? null,
-          title: null, // may be filled by overrides
-        }
-      : null,
-    tableLabel: table?.label ?? null,
-    title: table?.label ?? uuid,
-    phase: null,
-    groupId: null,
-    matchId: null,
+  const groupId =
+    merged?.groupId ??
+    merged?.table?.groupId ??
+    merged?.tournament?.groupId ??
+    null;
+
+  const phase =
+    merged?.phase ??
+    merged?.table?.phase ??
+    merged?.tournament?.phase ??
+    null;
+
+  const tableLabel =
+    merged?.tableLabel ??
+    merged?.table?.label ??
+    null;
+
+  const title =
+    merged?.title ??
+    merged?.table?.title ??
+    merged?.table?.label ??
+    (tableLabel || uuid);
+
+  return { phase, groupId, tableLabel, title, table: merged?.table ?? table };
+}
+
+function defaultGroupLabel(groupId) {
+  const g = String(groupId ?? "").trim();
+  if (!g) return "予選グループ";
+  return `予選${g}グループ`;
+}
+
+/**
+ * derived.playerStats から seat の deltaTotal を取る（無いときは 0）
+ */
+function deltaBySeat(derived, seat) {
+  const arr = derived?.playerStats;
+  if (!Array.isArray(arr)) return 0;
+  const st = arr.find((x) => typeof x?.seat === "number" && x.seat === seat);
+  return safeNum(st?.deltaTotal);
+}
+
+/**
+ * Mongo doc -> winner item
+ */
+function buildWinnerItem(doc) {
+  const uuid = doc.uuid;
+  const meta = resolveGameMeta(uuid);
+  if (!meta.groupId) return null;
+
+  const finalScores = normalizeScores(doc.finalScores);
+  const placeBySeat = placementByScores(finalScores);
+  const winSeat = winnerSeatByScores(finalScores);
+
+  const players = Array.isArray(doc.players) ? doc.players : [];
+  const pBySeat = new Map();
+  for (const p of players) {
+    if (typeof p?.seat === "number") pBySeat.set(p.seat, p);
+  }
+
+  const winnerNick = String(pBySeat.get(winSeat)?.nickname ?? "").trim();
+  const winnerResolved = resolvePlayerByNickname(winnerNick);
+
+  const winner = {
+    seat: winSeat,
+    nickname: winnerNick,
+    playerId: winnerResolved.playerId ?? null,
+    displayName: winnerResolved.displayName ?? winnerNick,
+    image: winnerResolved.image ?? null,
+    points: safeNum(finalScores[winSeat]),
+    delta: deltaBySeat(doc.derived, winSeat),
+    place: 1,
   };
 
-  // apply overrides.yaml games[uuid]
-  const withOv = applyGameOverride(uuid, base);
+  const opponents = [];
+  for (let seat = 0; seat < 4; seat++) {
+    if (seat === winSeat) continue;
+    const nick = String(pBySeat.get(seat)?.nickname ?? "").trim();
+    const r = resolvePlayerByNickname(nick);
+    opponents.push({
+      seat,
+      nickname: nick,
+      playerId: r.playerId ?? null,
+      displayName: r.displayName ?? nick,
+      image: r.image ?? null,
+      points: safeNum(finalScores[seat]),
+      place: placeBySeat[seat],
+    });
+  }
 
-  // normalize common presentation helpers
-  const tableLabel = withOv?.tableLabel ?? withOv?.table?.label ?? base.tableLabel ?? null;
-  const title = withOv?.title ?? withOv?.table?.title ?? withOv?.table?.label ?? base.title ?? uuid;
-
-  // also keep table.title if present
-  const table2 = withOv.table
-    ? { ...withOv.table, title: withOv.table.title ?? (withOv.title ?? null) }
-    : withOv.table;
+  opponents.sort((a, b) => (a.place - b.place) || (a.seat - b.seat));
 
   return {
-    ...withOv,
-    table: table2,
-    tableLabel,
-    title,
+    groupId: meta.groupId,
+    gameUuid: uuid,
+    startTime: doc.startTime ?? null,
+    endTime: doc.endTime ?? null,
+    tableLabel: meta.tableLabel,
+    title: meta.title,
+    winner,
+    opponents,
   };
 }
 
 /**
- * Load all games (small scale assumed).
- * Note: phase/groupId/matchId come from overlay overrides, so we must scan.
+ * wildcard 用：全非1位プレイヤーを並べる
  */
-async function loadAllGamesEnriched(mongo) {
+function sortWildcardCandidates(a, b) {
+  if (b.points !== a.points) return b.points - a.points; // points desc
+  if (a.seat !== b.seat) return a.seat - b.seat; // tie seat asc
+  if (a.startTime !== b.startTime) return (a.startTime ?? 0) - (b.startTime ?? 0);
+  const gu = String(a.gameUuid).localeCompare(String(b.gameUuid), "ja");
+  if (gu !== 0) return gu;
+  return String(a.nickname).localeCompare(String(b.nickname), "ja");
+}
+
+/**
+ * competition ranking 付与（1,2,2,4...）
+ * 同点判定は points のみ（席順は並び順に効く）
+ */
+function attachCompetitionRankByPoints(sortedRows) {
+  let lastPoints = null;
+  let lastRank = 0;
+
+  return sortedRows.map((r, idx) => {
+    const p = safeNum(r.points);
+    if (idx === 0) {
+      lastRank = 1;
+      lastPoints = p;
+    } else if (p !== lastPoints) {
+      lastRank = idx + 1;
+      lastPoints = p;
+    }
+    return { ...r, rank: lastRank };
+  });
+}
+
+/**
+ * 指定groupIdの対局（予選）を探す
+ * 予選が「各グループ1卓のみ」前提なので、最初に見つかった1件を採用
+ */
+async function findQualifierGameByGroupId(mongo, groupId) {
   const docs = await mongo.colDerived
     .find(
       {},
@@ -160,298 +219,248 @@ async function loadAllGamesEnriched(mongo) {
           endTime: 1,
           players: 1,
           finalScores: 1,
+          derived: 1,
         },
       }
     )
     .sort({ startTime: 1 })
     .toArray();
 
-  return docs.map(enrichGameFromDoc);
-}
-
-function pickQualifierGameByGroup(games) {
-  // For each groupId, choose the latest by startTime (safety)
-  const byGroup = new Map();
-  for (const g of games) {
-    if (g?.phase !== "qualifier") continue;
-    const groupId = safeStr(g?.groupId).trim();
-    if (!groupId) continue;
-
-    const prev = byGroup.get(groupId);
-    if (!prev) {
-      byGroup.set(groupId, g);
-      continue;
-    }
-    const tPrev = Number(prev.startTime) || 0;
-    const tThis = Number(g.startTime) || 0;
-    if (tThis >= tPrev) byGroup.set(groupId, g);
-  }
-  return byGroup;
-}
-
-function buildQualifierStandingsForGame(game) {
-  const scores = normalizeScores(game?.finalScores);
-  const placeBySeat = placeBySeatWithSeatTiebreak(scores);
-  const wSeat = winnerSeat(scores);
-
-  const standings = (game.players || [])
-    .slice()
-    .sort((a, b) => (a.seat ?? 99) - (b.seat ?? 99))
-    .map((p) => {
-      const seat = p.seat;
-      const raw = typeof seat === "number" ? scores[seat] : 0;
-      const points = calcTournamentPointsRaw(raw);
-      const place = typeof seat === "number" ? placeBySeat[seat] : null;
-
-      const isWinner = typeof seat === "number" ? seat === wSeat : false;
-
-      return {
-        playerId: p.playerId ?? null,
-        displayName: p.displayName ?? p.nickname ?? "",
-        image: p.image ?? null,
-        games: 1,
-        tournamentPoints: points, // raw final score as-is
-        place,
-        isWinner,
-        qualified: isWinner ? true : null,
-      };
-    });
-
-  // sort by place asc just in case
-  standings.sort((a, b) => (a.place ?? 99) - (b.place ?? 99));
-  return standings;
-}
-
-function buildWildcardCandidatesFromQualifierGames(byGroupGame) {
-  const out = [];
-
-  for (const [groupId, game] of byGroupGame.entries()) {
-    const scores = normalizeScores(game?.finalScores);
-    const wSeat = winnerSeat(scores);
-
-    for (const p of game.players || []) {
-      const seat = p.seat;
-      if (typeof seat !== "number") continue;
-      if (seat === wSeat) continue; // exclude group winner
-
-      const points = calcTournamentPointsRaw(scores[seat]);
-
-      out.push({
-        // rank filled later
-        playerId: p.playerId ?? null,
-        displayName: p.displayName ?? p.nickname ?? "",
-        image: p.image ?? null,
-        points,
-        groupId,
-        gameUuid: game.uuid,
-        seat,
-        startTime: game.startTime ?? null,
-      });
+  const gid = String(groupId ?? "").trim();
+  for (const d of docs) {
+    const meta = resolveGameMeta(d.uuid);
+    if (meta.phase !== "qualifier") continue;
+    if (!meta.groupId) continue;
+    if (String(meta.groupId) === gid) {
+      return { doc: d, meta };
     }
   }
-
-  // sort by points desc, tie by seat asc (rule), then startTime asc for stability
-  out.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (a.seat !== b.seat) return a.seat - b.seat;
-    return (Number(a.startTime) || 0) - (Number(b.startTime) || 0);
-  });
-
-  // assign rank 1..N (no ties)
-  for (let i = 0; i < out.length; i++) out[i].rank = i + 1;
-
-  // remove internal fields not in API
-  return out.map(({ seat, startTime, ...rest }) => rest);
-}
-
-function roundNameFromPhase(phase) {
-  // tweak as you like; also you can override on the game itself via overrides.yaml if desired
-  switch (phase) {
-    case "finals_r1":
-      return "決勝T1回戦";
-    case "finals_sf":
-      return "準決勝";
-    case "finals_f":
-      return "決勝";
-    default:
-      return "決勝トーナメント";
-  }
-}
-
-function buildFinalsBracket(games) {
-  const finals = games.filter((g) => typeof g?.phase === "string" && g.phase.startsWith("finals"));
-  // group by phase -> rounds
-  const byPhase = new Map();
-  for (const g of finals) {
-    const ph = g.phase;
-    if (!byPhase.has(ph)) byPhase.set(ph, []);
-    byPhase.get(ph).push(g);
-  }
-
-  // stable round ordering
-  const phaseOrder = ["finals_r1", "finals_sf", "finals_f"];
-  const phases = [...byPhase.keys()].sort((a, b) => {
-    const ia = phaseOrder.indexOf(a);
-    const ib = phaseOrder.indexOf(b);
-    if (ia !== -1 && ib !== -1) return ia - ib;
-    if (ia !== -1) return -1;
-    if (ib !== -1) return 1;
-    return a.localeCompare(b);
-  });
-
-  const rounds = phases.map((ph) => {
-    const gs = byPhase.get(ph) || [];
-    // sort by matchId then startTime
-    gs.sort((a, b) => {
-      const ma = safeStr(a.matchId);
-      const mb = safeStr(b.matchId);
-      if (ma && mb && ma !== mb) return ma.localeCompare(mb);
-      return (Number(a.startTime) || 0) - (Number(b.startTime) || 0);
-    });
-
-    const matches = gs.map((g) => ({
-      matchId: g.matchId ?? null,
-      tableLabel: g.tableLabel ?? null,
-      title: g.title ?? null,
-      gameUuid: g.uuid,
-      startTime: g.startTime ?? null,
-      players: g.players || [],
-      result: g.finalScores
-        ? { finalScores: normalizeScores(g.finalScores) }
-        : null,
-    }));
-
-    return {
-      name: roundNameFromPhase(ph),
-      matches,
-    };
-  });
-
-  return { rounds };
+  return null;
 }
 
 function mountTournamentRoutes(app, { mongo }) {
-  // A) meta
-  app.get("/api/tournament/meta", async (_req, res) => {
-    res.json({
-      season: process.env.TOURNAMENT_SEASON || "2025",
-      qualifier: {
-        groups: QUALIFIER_GROUPS,
-        wildcards: QUALIFIER_WILDCARDS,
-        mode: "tonpuu",
-        umaoka: false,
-        startScore: 30000,
-        gamesPerPlayer: 1,
-        wildcardRanking: {
-          basis: "raw_final_score",
-          tieBreak: "seat_order",
-        },
-      },
-      finals: [
-        { name: "決勝T1回戦", players: 32, mode: "tonpuu", advance: 16 },
-        { name: "準決勝", players: 16, mode: "hanchan", advance: 4 },
-        { name: "決勝", players: 4, mode: "hanchan", games: 2 },
-      ],
-    });
-  });
+  /**
+   * 予選グループ一覧
+   * GET /api/tournament/qualifier/groups
+   */
+  app.get("/api/tournament/qualifier/groups", async (_req, res) => {
+    const docs = await mongo.colDerived
+      .find({}, { projection: { _id: 0, uuid: 1 } })
+      .toArray();
 
-  // B) KPI
-  app.get("/api/tournament/kpi", async (req, res) => {
-    const phase = safeStr(req.query.phase || "qualifier");
-
-    const games = await loadAllGamesEnriched(mongo);
-
-    if (phase === "finals") {
-      const finalsPlayed = games.filter((g) => typeof g?.phase === "string" && g.phase.startsWith("finals")).length;
-      return res.json({
-        phase: "finals",
-        gamesPlayed: finalsPlayed,
-      });
+    const set = new Set();
+    for (const d of docs) {
+      const meta = resolveGameMeta(d.uuid);
+      if (meta.phase !== "qualifier") continue;
+      if (!meta.groupId) continue;
+      set.add(String(meta.groupId));
     }
 
-    // qualifier KPI
-    const byGroupGame = pickQualifierGameByGroup(games);
-    const gamesPlayed = byGroupGame.size;
-
-    const candidates = buildWildcardCandidatesFromQualifierGames(byGroupGame);
-    const cut = candidates.length >= QUALIFIER_WILDCARDS ? candidates[QUALIFIER_WILDCARDS - 1] : null;
-
-    res.json({
-      phase: "qualifier",
-      gamesTotal: QUALIFIER_GROUPS,
-      gamesPlayed,
-      groupWinnersConfirmed: gamesPlayed,
-      wildcardSlots: QUALIFIER_WILDCARDS,
-      wildcardCut: cut
-        ? {
-            rank: QUALIFIER_WILDCARDS,
-            points: cut.points,
-            playerId: cut.playerId ?? null,
-            displayName: cut.displayName,
-          }
-        : null,
-    });
-  });
-
-  // C) list groups
-  app.get("/api/tournament/qualifier/groups", async (_req, res) => {
-    const games = await loadAllGamesEnriched(mongo);
-    const byGroupGame = pickQualifierGameByGroup(games);
-
-    const groups = [...byGroupGame.keys()]
-      .sort((a, b) => a.localeCompare(b))
-      .map((groupId) => ({ groupId, label: makeGroupLabel(groupId) }));
+    const groups = [...set]
+      .sort((a, b) => String(a).localeCompare(String(b), "ja"))
+      .map((groupId) => ({ groupId, label: defaultGroupLabel(groupId) }));
 
     res.json({ groups });
   });
 
-  // C2) group standings
+  /**
+   * 予選グループ standings
+   * GET /api/tournament/qualifier/groups/:groupId/standings
+   *
+   * フロント期待形（あなたの page.tsx に合わせる）：
+   * {
+   *   groupId,
+   *   tables: [{ tableLabel, title, startTime, gameUuid }],
+   *   standings: [{ playerId, displayName, image, games, tournamentPoints, place, isWinner, qualified }]
+   * }
+   */
   app.get("/api/tournament/qualifier/groups/:groupId/standings", async (req, res) => {
-    const groupId = safeStr(req.params.groupId).trim();
-    if (!groupId) return res.status(404).json({ error: "not found" });
+    const groupId = String(req.params.groupId ?? "").trim();
+    const found = await findQualifierGameByGroupId(mongo, groupId);
+    if (!found) return res.status(404).json({ error: "not found" });
 
-    const games = await loadAllGamesEnriched(mongo);
-    const byGroupGame = pickQualifierGameByGroup(games);
-    const game = byGroupGame.get(groupId);
+    const { doc, meta } = found;
 
-    if (!game) return res.status(404).json({ error: "not found" });
+    const scores = normalizeScores(doc.finalScores);
+    const placeBySeat = placementByScores(scores);
+    const winSeat = winnerSeatByScores(scores);
 
-    const standings = buildQualifierStandingsForGame(game);
+    const players = Array.isArray(doc.players) ? doc.players : [];
+    const pBySeat = new Map();
+    for (const p of players) {
+      if (typeof p?.seat === "number") pBySeat.set(p.seat, p);
+    }
+
+    const standings = [];
+    for (let seat = 0; seat < 4; seat++) {
+      const nick = String(pBySeat.get(seat)?.nickname ?? "").trim();
+      const r = resolvePlayerByNickname(nick);
+
+      const tournamentPoints = safeNum(scores[seat]); // 予選は素点そのまま
+
+      standings.push({
+        seat,
+        playerId: r.playerId ?? null,
+        displayName: r.displayName ?? nick,
+        image: r.image ?? null,
+        games: 1,
+        tournamentPoints,
+        place: placeBySeat[seat],
+        isWinner: seat === winSeat,
+        qualified: seat === winSeat, // 予選は1回なので1位は確定通過
+      });
+    }
+
+    // 表示順：place asc（同順位なら seat asc）
+    standings.sort((a, b) => (a.place - b.place) || (a.seat - b.seat));
 
     res.json({
       groupId,
       tables: [
         {
-          tableLabel: game.tableLabel ?? null,
-          title: game.title ?? null,
-          gameUuid: game.uuid,
-          startTime: game.startTime ?? null,
+          gameUuid: doc.uuid,
+          startTime: doc.startTime ?? null,
+          tableLabel: meta.tableLabel ?? null,
+          title: meta.title ?? null,
         },
       ],
-      standings,
+      standings: standings.map((x) => ({
+        playerId: x.playerId,
+        displayName: x.displayName,
+        image: x.image,
+        games: x.games,
+        tournamentPoints: x.tournamentPoints,
+        place: x.place,
+        isWinner: x.isWinner,
+        qualified: x.qualified,
+      })),
     });
   });
 
-  // D) wildcards
-  app.get("/api/tournament/qualifier/wildcards", async (_req, res) => {
-    const games = await loadAllGamesEnriched(mongo);
-    const byGroupGame = pickQualifierGameByGroup(games);
+  /**
+   * 予選グループ1位一覧（通過確定）
+   * GET /api/tournament/qualifier/winners
+   */
+  app.get("/api/tournament/qualifier/winners", async (_req, res) => {
+    const docs = await mongo.colDerived
+      .find(
+        {},
+        {
+          projection: {
+            _id: 0,
+            uuid: 1,
+            startTime: 1,
+            endTime: 1,
+            players: 1,
+            finalScores: 1,
+            derived: 1,
+          },
+        }
+      )
+      .sort({ startTime: 1 })
+      .toArray();
 
-    const candidates = buildWildcardCandidatesFromQualifierGames(byGroupGame);
-    const cut = candidates.length >= QUALIFIER_WILDCARDS ? candidates[QUALIFIER_WILDCARDS - 1] : null;
+    const items = [];
+    for (const d of docs) {
+      const m = resolveGameMeta(d.uuid);
+      if (m.phase !== "qualifier") continue;
+      const it = buildWinnerItem(d);
+      if (it) items.push(it);
+    }
+
+    items.sort((a, b) => String(a.groupId).localeCompare(String(b.groupId), "ja"));
+    res.json({ phase: "qualifier", winners: items });
+  });
+
+  /**
+   * ワイルドカード順位（卓1位除外済み）
+   * GET /api/tournament/qualifier/wildcards
+   */
+  app.get("/api/tournament/qualifier/wildcards", async (_req, res) => {
+    const docs = await mongo.colDerived
+      .find(
+        {},
+        {
+          projection: {
+            _id: 0,
+            uuid: 1,
+            startTime: 1,
+            endTime: 1,
+            players: 1,
+            finalScores: 1,
+            derived: 1,
+          },
+        }
+      )
+      .sort({ startTime: 1 })
+      .toArray();
+
+    const candidates = [];
+
+    for (const d of docs) {
+      const meta = resolveGameMeta(d.uuid);
+      if (meta.phase !== "qualifier") continue;
+      if (!meta.groupId) continue;
+
+      const scores = normalizeScores(d.finalScores);
+      const winSeat = winnerSeatByScores(scores);
+
+      const players = Array.isArray(d.players) ? d.players : [];
+      const pBySeat = new Map();
+      for (const p of players) {
+        if (typeof p?.seat === "number") pBySeat.set(p.seat, p);
+      }
+
+      for (let seat = 0; seat < 4; seat++) {
+        if (seat === winSeat) continue;
+
+        const nick = String(pBySeat.get(seat)?.nickname ?? "").trim();
+        if (!nick) continue;
+
+        const r = resolvePlayerByNickname(nick);
+
+        candidates.push({
+          groupId: meta.groupId,
+          gameUuid: d.uuid,
+          startTime: d.startTime ?? null,
+          tableLabel: meta.tableLabel,
+          title: meta.title,
+          seat,
+          nickname: nick,
+          playerId: r.playerId ?? null,
+          displayName: r.displayName ?? nick,
+          image: r.image ?? null,
+          points: safeNum(scores[seat]),
+          delta: deltaBySeat(d.derived, seat),
+        });
+      }
+    }
+
+    candidates.sort(sortWildcardCandidates);
+    const ranked = attachCompetitionRankByPoints(candidates);
+
+    const cutRank = 4;
+    const cutRow = ranked.find((x) => x.rank === cutRank) || null;
 
     res.json({
-      cutRank: QUALIFIER_WILDCARDS,
-      cutPoints: cut ? cut.points : null,
-      candidates,
+      cutRank,
+      cutPoints: cutRow ? safeNum(cutRow.points) : null,
+      candidates: ranked.map((x) => ({
+        rank: x.rank,
+        playerId: x.playerId,
+        displayName: x.displayName,
+        image: x.image,
+        points: safeNum(x.points),
+        groupId: x.groupId,
+        gameUuid: x.gameUuid,
+        startTime: x.startTime,
+        tableLabel: x.tableLabel ?? null,
+        title: x.title ?? null,
+        seat: x.seat,
+        nickname: x.nickname,
+        delta: safeNum(x.delta),
+      })),
     });
-  });
-
-  // E) finals bracket
-  app.get("/api/tournament/finals/bracket", async (_req, res) => {
-    const games = await loadAllGamesEnriched(mongo);
-    const bracket = buildFinalsBracket(games);
-    res.json(bracket);
   });
 }
 

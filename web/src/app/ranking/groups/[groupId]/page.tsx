@@ -88,7 +88,7 @@ export default async function GroupPage(props: { params: Promise<{ groupId: stri
                 <tr key={r.displayName} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <PlayerAvatar name={r.displayName} src={r.image ?? null} size={38} />
+                      <PlayerAvatar name={r.displayName} src={r.image ?? null} size={44} />
                       <div className="min-w-0">
                         {r.playerId ? (
                           <Link href={`/players/${r.playerId}`} className="truncate font-semibold hover:underline">

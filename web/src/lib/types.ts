@@ -240,20 +240,6 @@ export type EnrichedPlayer = {
 };
 
 /** tournament */
-export type TournamentMeta = {
-  season: string;
-  qualifier: {
-    groups: number;
-    wildcards: number;
-    mode: "tonpuu" | "hanchan";
-    umaoka: boolean;
-    startScore: number;
-    gamesPerPlayer: number;
-    wildcardRanking: { basis: "raw_final_score"; tieBreak: "seat_order" };
-  };
-  finals: { name: string; players: number; mode: "tonpuu" | "hanchan"; advance?: number | null; games?: number | null }[];
-};
-
 export type TournamentKpiResponse = {
   phase: "qualifier" | "finals";
   gamesTotal?: number | null;
@@ -303,4 +289,46 @@ export type WildcardResponse = {
   cutRank: number;
   cutPoints?: number | null;
   candidates: WildcardCandidate[];
+};
+
+export type TournamentPlayerMini = {
+  seat: number;
+  nickname: string;
+  playerId?: string | null;
+  displayName: string;
+  image?: string | null;
+  points?: number | null;
+  delta?: number | null;
+  place?: number | null;
+};
+
+export type QualifierWinnerRow = {
+  groupId: string;
+  gameUuid: string;
+  startTime?: number | null;
+  endTime?: number | null;
+  tableLabel?: string | null;
+  title?: string | null;
+  winner: TournamentPlayerMini;
+  opponents: TournamentPlayerMini[];
+};
+
+export type QualifierWinnersResponse = {
+  phase: "qualifier";
+  winners: QualifierWinnerRow[];
+};
+
+export type TournamentMeta = {
+  season: string;
+  qualifier: {
+    mode: "tonpuu" | "hanchan" | string;
+    groups: number;
+    playersPerGroup: number;
+    gamesPerPlayer: number;
+    startPoints: number;
+    useRawPoints: boolean;
+    tieBreak: "seat_order" | string;
+    wildcardSlots: number;
+  };
+  finals: any[];
 };

@@ -50,7 +50,7 @@ function PlayerLinkChip({
 }) {
   return (
     <Link href={href} className="inline-flex items-center gap-2 hover:opacity-90">
-      <PlayerAvatar name={name} src={src} size={18} />
+      <PlayerAvatar name={name} src={src} size={24} />
       <span className="max-w-[10rem] truncate">{name}</span>
     </Link>
   );

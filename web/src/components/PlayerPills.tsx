@@ -9,7 +9,7 @@ export default function PlayerPills({ players }: { players: PlayerPill[] }) {
       {players.slice(0, 4).map((p) => {
         const content = (
           <>
-            <PlayerAvatar name={p.label} src={p.image ?? null} size={18} />
+            <PlayerAvatar name={p.label} src={p.image ?? null} size={32} />
             <span className="max-w-[16rem] truncate">{p.label}</span>
           </>
         );

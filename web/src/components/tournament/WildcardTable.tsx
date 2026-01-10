@@ -33,7 +33,7 @@ export default function WildcardTable({ data }: { data: WildcardResponse }) {
                 {r.rank}位
               </div>
 
-              <PlayerAvatar name={r.displayName} src={r.image ?? null} size={32} />
+              <PlayerAvatar name={r.displayName} src={r.image ?? null} size={42} />
 
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{r.displayName}</div>

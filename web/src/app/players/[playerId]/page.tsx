@@ -62,7 +62,7 @@ export default async function PlayerPage(props: { params: Promise<{ playerId: st
       {/* プロフィール */}
       <div className={`${cardCls} mt-6 p-5`}>
         <div className="flex items-center gap-4">
-          <PlayerAvatar name={p.displayName} src={p.image ?? null} size={64} />
+          <PlayerAvatar name={p.displayName} src={p.image ?? null} size={128} />
           <div className="min-w-0 flex-1">
             <div className="truncate text-2xl font-semibold tracking-tight">
               {p.displayName}

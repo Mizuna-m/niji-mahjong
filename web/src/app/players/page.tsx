@@ -30,7 +30,7 @@ export default async function PlayersPage() {
               <PlayerAvatar
                 name={p.displayName}
                 src={p.image ?? null}
-                size={48}
+                size={64}
               />
 
               <div className="min-w-0 flex-1">

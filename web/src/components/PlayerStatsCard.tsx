@@ -51,7 +51,7 @@ export default function PlayerStatsCard({ stats }: { stats: PlayerStat }) {
           className="shrink-0 hover:opacity-90"
           aria-label={`${stats.displayName} の参加者ページへ`}
         >
-          <PlayerAvatar name={stats.displayName} src={stats.image ?? null} size={44} />
+          <PlayerAvatar name={stats.displayName} src={stats.image ?? null} size={60} />
         </Link>
 
         <div className="min-w-0">

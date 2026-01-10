@@ -6,6 +6,7 @@ import type {
   LeaderboardResponse,
   PlayersListResponse,
   PlayerSummaryResponse,
+  QualifierWinnersResponse,
 } from "@/lib/types";
 
 export const API_BASE_PUBLIC =
@@ -105,4 +106,8 @@ export async function fetchQualifierGroupStandings(base = API_BASE_INTERNAL, gro
 
 export async function fetchQualifierWildcards(base = API_BASE_INTERNAL) {
   return apiGet<WildcardResponse>(base, "/api/tournament/qualifier/wildcards");
+}
+
+export async function fetchQualifierWinners(base = API_BASE_INTERNAL) {
+  return apiGet<QualifierWinnersResponse>(base, "/api/tournament/qualifier/winners");
 }

@@ -129,7 +129,7 @@ export default function LeaderboardView() {
 
                 const playerCell = (
                   <div className="inline-flex items-center gap-3">
-                    <PlayerAvatar name={r.displayName} src={r.image ?? null} size={34} />
+                    <PlayerAvatar name={r.displayName} src={r.image ?? null} size={44} />
                     <div className="min-w-0">
                       <div className="truncate font-semibold">{r.displayName}</div>
                       {!r.playerId && (
@@ -146,9 +146,9 @@ export default function LeaderboardView() {
                     key={key}
                     className="border-b border-black/5 last:border-b-0 hover:bg-black/[0.03] dark:border-white/10 dark:hover:bg-white/[0.05]"
                   >
-                    <td className="px-4 py-3 font-mono">{r.rank}</td>
+                    <td className="px-4 py-2 font-mono">{r.rank}</td>
 
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2">
                       {r.playerId ? (
                         <Link className="hover:underline" href={`/players/${r.playerId}`}>
                           {playerCell}
@@ -158,11 +158,11 @@ export default function LeaderboardView() {
                       )}
                     </td>
 
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-2 text-right">
                       <div className={`font-mono text-base font-semibold ${valueCls}`}>{r.value}</div>
                     </td>
 
-                    <td className="px-4 py-3 text-right font-mono">
+                    <td className="px-4 py-2 text-right font-mono">
                       {r.games ?? "—"}
                     </td>
                   </tr>
