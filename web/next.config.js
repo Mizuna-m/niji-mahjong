@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 必要になったら設定を足す
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: process.env.API_BASE_INTERNAL
+          ? `${process.env.API_BASE_INTERNAL}/api/:path*`
+          : "http://api:3000/api/:path*",
+      },
+    ];
+  },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

@@ -11,4 +11,8 @@ tables:
     label: "予選C卓"
   - uuid: "260110-0701effb-45ae-4bd1-8dc1-0827b8876d58"
     label: "予選D卓"
-  
+  - uuid: "260110-36e6d7c5-6cdf-4f50-ade2-06bc776d7cf3"
+    label: "予選E卓"
+  - uuid: "260110-f4d9e089-0457-4d3e-92e4-f2811dbce901"
+    label: "予選F卓"
+    
