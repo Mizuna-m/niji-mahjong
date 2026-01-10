@@ -4,6 +4,13 @@ import PlayerAvatar from "@/components/PlayerAvatar";
 import { cardCls, pillCls } from "@/lib/ui";
 import { playerHref } from "@/lib/playerLink";
 
+type PlayerChip = {
+  seat: number;
+  name: string;
+  href: string;
+  src: string | null;
+};
+
 function playerBySeat(doc: GameDetailResponse, seat: number) {
   return doc.derived.players.find((p) => p.seat === seat);
 }
@@ -35,19 +42,10 @@ function resultBadge(kind: "tsumo" | "ron") {
 function roundDisplayName(r: any) {
   const base = (r.roundNameLong ?? r.roundName ?? `${r.id.roundIndex + 1}局目`) as string;
   const sticks = r.id?.riichiSticks ?? 0;
-  // 「東1局 1本場 （供託1）」のイメージに寄せる
   return sticks > 0 ? `${base}（供託${sticks}）` : base;
 }
 
-function PlayerLinkChip({
-  href,
-  name,
-  src,
-}: {
-  href: string;
-  name: string;
-  src: string | null;
-}) {
+function PlayerLinkChip({ href, name, src }: { href: string; name: string; src: string | null }) {
   return (
     <Link href={href} className="inline-flex items-center gap-2 hover:opacity-90">
       <PlayerAvatar name={name} src={src} size={24} />
@@ -81,10 +79,7 @@ export default function RoundsTableFriendly({ doc }: { doc: GameDetailResponse }
 
               if (!h) {
                 return (
-                  <tr
-                    key={idx}
-                    className="border-b border-black/5 last:border-b-0 dark:border-white/10"
-                  >
+                  <tr key={idx} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
                     <td className="py-2 pr-3 font-mono">{roundDisplayName(r)}</td>
                     <td className="py-2 pr-3 text-zinc-600 dark:text-zinc-400">流局/記録なし</td>
                     <td className="py-2 pr-3">—</td>
@@ -94,13 +89,13 @@ export default function RoundsTableFriendly({ doc }: { doc: GameDetailResponse }
                 );
               }
 
-              const winners = h.winners.map((seat: number) => {
+              const winners: PlayerChip[] = (h.winners as number[]).map((seat: number) => {
                 const name = playerLabel(doc, seat);
                 const href = playerHref(playerId(doc, seat), playerBySeat(doc, seat)?.nickname ?? null, name);
                 return { seat, name, href, src: playerImg(doc, seat) };
               });
 
-              const loser =
+              const loser: PlayerChip | null =
                 typeof h.loser === "number"
                   ? (() => {
                       const seat = h.loser as number;
@@ -111,36 +106,27 @@ export default function RoundsTableFriendly({ doc }: { doc: GameDetailResponse }
                   : null;
 
               return (
-                <tr
-                  key={idx}
-                  className="border-b border-black/5 last:border-b-0 dark:border-white/10"
-                >
+                <tr key={idx} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
                   <td className="py-2 pr-3 font-mono">{roundDisplayName(r)}</td>
 
                   <td className="py-2 pr-3">
-                    <span className={resultBadge(h.kind)}>
-                      {h.kind === "tsumo" ? "ツモ" : "ロン"}
-                    </span>
+                    <span className={resultBadge(h.kind)}>{h.kind === "tsumo" ? "ツモ" : "ロン"}</span>
                   </td>
 
                   <td className="py-2 pr-3">
                     <div className="flex flex-wrap gap-3">
-                      {winners.map((w) => (
+                      {winners.map((w: PlayerChip) => (
                         <PlayerLinkChip key={w.seat} href={w.href} name={w.name} src={w.src} />
                       ))}
                     </div>
                   </td>
 
                   <td className="py-2 pr-3">
-                    {loser ? (
-                      <PlayerLinkChip href={loser.href} name={loser.name} src={loser.src} />
-                    ) : (
-                      "—"
-                    )}
+                    {loser ? <PlayerLinkChip href={loser.href} name={loser.name} src={loser.src} /> : "—"}
                   </td>
 
                   <td className="py-2 pr-3 font-mono">
-                    {Array.isArray(h.deltaScores) ? h.deltaScores.map(signed).join(" / ") : "—"}
+                    {Array.isArray(h.deltaScores) ? (h.deltaScores as number[]).map(signed).join(" / ") : "—"}
                   </td>
                 </tr>
               );
