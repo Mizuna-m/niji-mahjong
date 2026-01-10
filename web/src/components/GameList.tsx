@@ -20,7 +20,7 @@ export default function GameList() {
     try {
       setErr("");
       // ★ Clientでは相対URLに寄せる（rewrites を効かせる）
-      const r = await fetchGames("");
+      const r = await fetchGames();
       setGames(r.games ?? []);
     } catch (e: any) {
       setErr(e?.message ?? String(e));
