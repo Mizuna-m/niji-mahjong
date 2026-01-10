@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="flex flex-wrap gap-2">
               <NavLink href="/" label="対局" />
               <NavLink href="/players" label="参加者" />
-              <NavLink href="/ranking" label="ランキング" />
+              <NavLink href="/ranking" label="予選状況" />
               <NavLink href="/stats/leaderboard" label="戦績順位" />
               <NavLink href="/stats/cumulative" label="累積" />
             </nav>

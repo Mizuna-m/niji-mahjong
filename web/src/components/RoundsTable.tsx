@@ -22,7 +22,7 @@ export default function RoundsTable({ game }: { game: DerivedGame }) {
             <tr>
               <th className="py-2 pr-3">局</th>
               <th className="py-2 pr-3">結果</th>
-              <th className="py-2 pr-3">勝者</th>
+              <th className="py-2 pr-3">和了</th>
               <th className="py-2 pr-3">放銃</th>
               <th className="py-2 pr-3">点移動</th>
             </tr>

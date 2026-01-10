@@ -22,7 +22,7 @@ export default async function RankingPage() {
     <section>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-xl font-semibold tracking-tight">ランキング</div>
+          <div className="text-xl font-semibold tracking-tight">予選状況</div>
           <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             {meta.season} / 予選（東風）・ワイルドカード {meta.qualifier.wildcards}枠
           </div>

@@ -120,7 +120,7 @@ export default async function GroupPage(props: { params: Promise<{ groupId: stri
         </div>
 
         <div className="border-t border-black/5 px-4 py-3 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-500">
-          同点の場合：席順（seatが小さい方）を上位として扱う想定
+          同点の場合：席順（seatが小さい方）を上位とする
         </div>
       </div>
     </section>
