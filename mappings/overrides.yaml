@@ -52,7 +52,27 @@ games:
     phase: qualifier
     groupId: Q
     title: "三倍満"
-  
+  "260111-0c24c87f-259c-4b17-a027-b8dac18b8a95":
+    phase: qualifier
+    groupId: R
+  "260111-18d70540-03b2-4ff4-9c71-49d7bc0af738":
+    phase: qualifier
+    groupId: S
+  "260111-d35ed9f4-8912-4019-93a7-da626ff715dd":
+    phase: qualifier
+    groupId: T
+  "260111-0ee06a6a-4007-4968-8d37-b558b1aa6a85":
+    phase: qualifier
+    groupId: U
+  "260111-f67ca124-1d8a-4888-966a-f0c8f8fd08f8":
+    phase: qualifier
+    groupId: V
+  "260111-9fe3301c-1995-44b6-88fa-eef06f9f55c4":
+    phase: qualifier
+    groupId: W
+  "260111-676b39d1-675a-408b-ba2e-ba48ff5cee3b":
+    phase: qualifier
+    groupId: X
 
 # "uuid":
 #   title: "sticky_label"
