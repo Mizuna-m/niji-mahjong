@@ -27,4 +27,14 @@ tables:
     label: "予選K卓"
   - uuid: "260110-b1da01cc-551f-4a16-b582-770fe5cbce16"
     label: "予選L卓"
-  
+  - uuid: "260111-c78771da-5f92-4b93-94fe-8bfb32fc98f3"
+    label: "予選O卓"
+  - uuid: "260111-fab918a3-713e-492e-b05a-d5b5c62c3fd2"
+    label: "予選N卓"
+  - uuid: "260111-7c3dbfda-a33d-47df-8c27-2c44f0b297a9"
+    label: "予選M卓"
+  - uuid: "260111-4d41c599-49a7-4dd2-905e-c75b9ee21630"
+    label: "予選P卓"
+  - uuid: "260111-84d0860d-edea-4223-9300-44906d0faaa2"
+    label: "予選Q卓"
+    
