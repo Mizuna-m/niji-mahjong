@@ -188,7 +188,7 @@ rounds:
       - matchId: SF-10
         label: 準決勝 2卓（第10試合）
         tableLabel: "SF-10"
-        gameUuid: null
+        gameUuid: "260112-187085a2-0271-4e2b-8cd7-a67e6254fc48"
         seats:
           - seat: 0
             playerId: TodorokiKyoko
@@ -198,10 +198,14 @@ rounds:
             playerId: JoeRikiichi
           - seat: 3
             playerId: LuisCammy
+        advance:
+          - fromSeat: 2
+            toMatchId: F
+            toSeat: 1
       - matchId: SF-11
         label: 準決勝 3卓（第11試合）
         tableLabel: "SF-11"
-        gameUuid: null
+        gameUuid: "260112-1ea6c829-4f7c-4cff-834c-f358b554f668"
         seats:
           - seat: 0
             playerId: Ryushen
@@ -211,6 +215,10 @@ rounds:
             playerId: SakakiNess
           - seat: 3
             playerId: KaidaHaru
+        advance:
+          - fromSeat: 3
+            toMatchId: F
+            toSeat: 2
       - matchId: SF-12
         label: 準決勝 4卓（第12試合）
         tableLabel: "SF-12"
@@ -230,14 +238,14 @@ rounds:
     matches:
       - matchId: F
         label: 決勝
-        tableLabel: "FINAL"
+        tableLabel: "F"
         gameUuid: null
         seats:
           - seat: 0
             source: "SF-9-1st"
           - seat: 1
-            source: "SF-10-1st"
+            playerId: JoeRikiichi
           - seat: 2
-            source: "SF-11-1st"
+            playerId: KaidaHaru
           - seat: 3
             source: "SF-12-1st"
