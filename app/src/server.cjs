@@ -16,6 +16,7 @@ const { mountGameRoutes } = require("./routes/games.cjs");
 const { mountPlayersRoutes } = require("./routes/players.cjs");
 const { mountStatsRoutes } = require("./routes/stats.cjs");
 const { mountTournamentRoutes } = require("./routes/tournament.cjs");
+const { mountFinalsRoutes } = require("./routes/finals.cjs");
 const mappings = require("./mappings/store.cjs");
 const { mountTournamentMetaRoutes } = require("./routes/tournamentMeta.cjs");
 const { mountTournamentKpiRoutes } = require("./routes/tournamentKpi.cjs");
@@ -65,6 +66,7 @@ async function main() {
   mountPlayersRoutes(app, { mongo, mappings });
   mountStatsRoutes(app, { mongo, mappings });
   mountTournamentRoutes(app, { mongo });
+  mountFinalsRoutes(app, { mongo });
   mountTournamentMetaRoutes(app);
   mountTournamentKpiRoutes(app, { mongo });
 

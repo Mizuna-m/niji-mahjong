@@ -73,21 +73,74 @@ function normalizeOverridesYaml(doc) {
   return { games, players };
 }
 
+function normalizeFinalsYaml(doc) {
+  if (!doc || typeof doc !== "object") return null;
+  const rounds = Array.isArray(doc.rounds) ? doc.rounds : [];
+  const outRounds = [];
+
+  for (const r of rounds) {
+    if (!r || typeof r !== "object") continue;
+    const roundId = String(r.roundId || "").trim();
+    const label = String(r.label || "").trim();
+
+    const matches = Array.isArray(r.matches) ? r.matches : [];
+    const outMatches = [];
+
+    for (const m of matches) {
+      if (!m || typeof m !== "object") continue;
+      const matchId = String(m.matchId || "").trim();
+      if (!matchId) continue;
+
+      const seats = Array.isArray(m.seats) ? m.seats : [];
+      outMatches.push({
+        matchId,
+        label: m.label ? String(m.label) : undefined,
+        tableLabel: m.tableLabel ? String(m.tableLabel) : undefined,
+        gameUuid: m.gameUuid ? String(m.gameUuid) : null,
+        seats: seats
+          .filter((s) => s && typeof s === "object" && Number.isFinite(Number(s.seat)))
+          .map((s) => ({
+            seat: Number(s.seat),
+            playerId: s.playerId ? String(s.playerId) : undefined,
+            nickname: s.nickname ? String(s.nickname) : undefined,
+            source: s.source ? String(s.source) : undefined,
+          })),
+        advance: Array.isArray(m.advance) ? m.advance : [],
+      });
+    }
+
+    outRounds.push({
+      roundId: roundId || null,
+      label: label || null,
+      matches: outMatches,
+    });
+  }
+
+  return {
+    phase: "finals",
+    updatedAt: doc.updatedAt ? String(doc.updatedAt) : null,
+    rounds: outRounds,
+  };
+}
+
 function loadOverlayFromMappingsDir(sse) {
   const pPlayers = path.join(MAPPINGS_DIR, "players.yaml");
   const pIdent = path.join(MAPPINGS_DIR, "identities.yaml");
   const pTables = path.join(MAPPINGS_DIR, "tables.yaml");
   const pOverrides = path.join(MAPPINGS_DIR, "overrides.yaml");
+  const pFinals = path.join(MAPPINGS_DIR, "finals.yaml");
 
   const playersDoc = safeLoadYaml(pPlayers);
   const identDoc = safeLoadYaml(pIdent);
   const tablesDoc = safeLoadYaml(pTables);
   const overridesDoc = safeLoadYaml(pOverrides);
+  const finalsDoc = safeLoadYaml(pFinals);
 
   const players = normalizePlayersYaml(playersDoc);
   const identities = normalizeIdentitiesYaml(identDoc);
   const tables = normalizeTablesYaml(tablesDoc);
   const overrides = normalizeOverridesYaml(overridesDoc);
+  const finals = normalizeFinalsYaml(finalsDoc);
 
   const playersById = new Map();
   for (const p of players) playersById.set(p.id, p);
@@ -102,6 +155,7 @@ function loadOverlayFromMappingsDir(sse) {
     playersById,
     playerIdByNickname,
     tableByUuid,
+    finals,
     overrides: overrides || {},
   });
 
@@ -109,7 +163,8 @@ function loadOverlayFromMappingsDir(sse) {
     "[mappings] loaded",
     `players=${playersById.size}`,
     `identities=${playerIdByNickname.size}`,
-    `tables=${tableByUuid.size}`
+    `tables=${tableByUuid.size}`,
+    `finals=${finals ? "yes" : "no"}`,
   );
 
   sse?.broadcast?.({ type: "mapping_updated" });

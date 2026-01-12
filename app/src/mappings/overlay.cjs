@@ -5,6 +5,7 @@ let overlay = {
   playersById: new Map(), // playerId -> player
   playerIdByNickname: new Map(), // nickname -> playerId
   tableByUuid: new Map(), // uuid -> table
+  finals: null, // finals.yaml normalized (or null)
   overrides: {}, // {games?, players?}
 };
 

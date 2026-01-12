@@ -1,0 +1,41 @@
+updatedAt: 2026-01-12T00:00:00.000Z
+
+rounds:
+  - roundId: SF
+    label: 準決勝
+    matches:
+      - matchId: SF1
+        label: 準決勝 第1試合
+        tableLabel: "SF-1"
+        gameUuid: null   # 終わったら uuid を埋める（例: 250201-...）
+        seats:
+          - seat: 0
+            source: "Q-A"
+            # playerId / nickname / source のいずれかを指定
+          - seat: 1
+            source: "Q-B"
+          - seat: 2
+            source: "WC-1"
+          - seat: 3
+            source: "WC-2"
+        advance:
+          - fromSeat: 0
+            toMatchId: F
+            toSeat: 0
+
+  - roundId: F
+    label: 決勝
+    matches:
+      - matchId: F
+        label: 決勝
+        tableLabel: "FINAL"
+        gameUuid: null
+        seats:
+          - seat: 0
+            source: "SF1-1st"
+          - seat: 1
+            source: "SF2-1st"
+          - seat: 2
+            source: "SF1-2nd"
+          - seat: 3
+            source: "SF2-2nd"
