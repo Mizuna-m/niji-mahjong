@@ -3,7 +3,7 @@ import Link from "next/link";
 import { softBtnCls } from "@/lib/ui";
 
 export const metadata = {
-  title: "にじさんじ麻雀杯ログ",
+  title: "にじさんじ麻雀杯データベース",
 };
 
 function NavLink({ href, label }: { href: string; label: string }) {

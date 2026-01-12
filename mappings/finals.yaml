@@ -241,7 +241,7 @@ rounds:
     label: 決勝
     matches:
       - matchId: F
-        label: 決勝
+        label: 決勝（第13試合）
         tableLabel: "F"
         gameUuid: null
         seats:
