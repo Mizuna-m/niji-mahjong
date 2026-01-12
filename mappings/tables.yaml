@@ -77,4 +77,6 @@ tables:
     label: "準決勝 1卓（第9試合）"
   - uuid: "260112-d71b7a92-5105-4534-851a-43aaf56aa356"
     label: "決勝 第1戦"
+  - uuid: "260112-90384ccd-c065-4565-a019-dfd6acd20dbe"
+    label: "決勝 第2戦"
   
