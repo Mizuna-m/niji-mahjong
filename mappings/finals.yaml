@@ -184,7 +184,7 @@ rounds:
         advance:
           - fromSeat: 2
             toMatchId: F
-            toSeat: 0
+            toSeat: 3
       - matchId: SF-10
         label: 準決勝 2卓（第10試合）
         tableLabel: "SF-10"
@@ -201,7 +201,7 @@ rounds:
         advance:
           - fromSeat: 3
             toMatchId: F
-            toSeat: 1
+            toSeat: 2
       - matchId: SF-11
         label: 準決勝 3卓（第11試合）
         tableLabel: "SF-11"
@@ -218,7 +218,7 @@ rounds:
         advance:
           - fromSeat: 2
             toMatchId: F
-            toSeat: 2
+            toSeat: 0
       - matchId: SF-12
         label: 準決勝 4卓（第12試合）
         tableLabel: "SF-12"
@@ -235,7 +235,7 @@ rounds:
         advance:
           - fromSeat: 0
             toMatchId: F
-            toSeat: 3
+            toSeat: 1
 
   - roundId: F
     label: 決勝
