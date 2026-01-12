@@ -339,10 +339,6 @@ export default function FinalsBracketView({ bracket }: { bracket: FinalsBracketR
               </div>
             ) : null}
           </div>
-
-          <div className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">
-            ※「進出」は、この試合の <span className="font-semibold">advance</span> に含まれる席を強調しています。
-          </div>
         </div>
       </div>
     </div>

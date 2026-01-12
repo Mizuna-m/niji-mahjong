@@ -40,10 +40,10 @@ rounds:
         advance:
           - fromSeat: 0
             toMatchId: SF-9
-            toSeat: 3
+            toSeat: 2
           - fromSeat: 2
             toMatchId: SF-9
-            toSeat: 2
+            toSeat: 3
       - matchId: QF-3
         label: 決勝トーナメント1回戦 第3試合
         tableLabel: "QF-3"
@@ -60,10 +60,10 @@ rounds:
         advance:
           - fromSeat: 2
             toMatchId: SF-10
-            toSeat: 1
+            toSeat: 0
           - fromSeat: 3
             toMatchId: SF-10
-            toSeat: 0
+            toSeat: 1
       - matchId: QF-4
         label: 決勝トーナメント1回戦 第4試合
         tableLabel: "QF-4"
@@ -80,10 +80,10 @@ rounds:
         advance:
           - fromSeat: 3
             toMatchId: SF-10
-            toSeat: 2
+            toSeat: 3
           - fromSeat: 0
             toMatchId: SF-10
-            toSeat: 3
+            toSeat: 2
       - matchId: QF-5
         label: 決勝トーナメント1回戦 第5試合
         tableLabel: "QF-5"
@@ -100,10 +100,10 @@ rounds:
         advance:
           - fromSeat: 0
             toMatchId: SF-11
-            toSeat: 1
+            toSeat: 0
           - fromSeat: 2
             toMatchId: SF-11
-            toSeat: 0
+            toSeat: 1
       - matchId: QF-6
         label: 決勝トーナメント1回戦 第6試合
         tableLabel: "QF-6"
@@ -140,10 +140,10 @@ rounds:
         advance:
           - fromSeat: 0
             toMatchId: SF-12
-            toSeat: 1
+            toSeat: 0
           - fromSeat: 3
             toMatchId: SF-12
-            toSeat: 0
+            toSeat: 1
       - matchId: QF-8
         label: 決勝トーナメント1回戦 第8試合
         tableLabel: "QF-8"
@@ -160,10 +160,10 @@ rounds:
         advance:
           - fromSeat: 1
             toMatchId: SF-12
-            toSeat: 2
+            toSeat: 3
           - fromSeat: 0
             toMatchId: SF-12
-            toSeat: 3
+            toSeat: 2
 
   - roundId: SF
     label: 準決勝
@@ -178,9 +178,9 @@ rounds:
           - seat: 1
             playerId: SukoyaKana
           - seat: 2
-            playerId: SakuraRitsuki
-          - seat: 3
             playerId: MorinakaKazaki
+          - seat: 3
+            playerId: SakuraRitsuki
         # advance:
         #   - fromSeat: 0
         #     toMatchId: F
@@ -191,15 +191,15 @@ rounds:
         gameUuid: "260112-187085a2-0271-4e2b-8cd7-a67e6254fc48"
         seats:
           - seat: 0
-            playerId: TodorokiKyoko
-          - seat: 1
             playerId: Sophia_Valentine
+          - seat: 1
+            playerId: TodorokiKyoko
           - seat: 2
-            playerId: JoeRikiichi
-          - seat: 3
             playerId: LuisCammy
+          - seat: 3
+            playerId: JoeRikiichi
         advance:
-          - fromSeat: 2
+          - fromSeat: 3
             toMatchId: F
             toSeat: 1
       - matchId: SF-11
@@ -208,9 +208,9 @@ rounds:
         gameUuid: "260112-1ea6c829-4f7c-4cff-834c-f358b554f668"
         seats:
           - seat: 0
-            playerId: Ryushen
-          - seat: 1
             playerId: RindouMikoto
+          - seat: 1
+            playerId: Ryushen
           - seat: 2
             playerId: SakakiNess
           - seat: 3
@@ -225,13 +225,13 @@ rounds:
         gameUuid: null
         seats:
           - seat: 0
-            playerId: AmamiyaKokoro
-          - seat: 1
             playerId: AkagiWen
+          - seat: 1
+            playerId: AmamiyaKokoro
           - seat: 2
-            playerId: Lunlun_nijisanji
-          - seat: 3
             playerId: HanaMacchia
+          - seat: 3
+            playerId: Lunlun_nijisanji
 
   - roundId: F
     label: 決勝
