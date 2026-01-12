@@ -1,129 +1,349 @@
 // src/components/finals/FinalsBracketView.tsx
 import Link from "next/link";
-import type { FinalsBracketResponse, FinalsMatch, FinalsSeat } from "@/lib/typesTournament";
-import { pillCls } from "@/lib/ui";
+import type {
+  FinalsBracketResponse,
+  FinalsMatch,
+  FinalsSeat,
+} from "@/lib/typesTournament";
+import { cardCls, pillCls } from "@/lib/ui";
 import PlayerAvatar from "@/components/PlayerAvatar";
 import { playerHref } from "@/lib/playerLink";
 
-function SeatRow({ s }: { s: FinalsSeat }) {
-  const name = s.displayName || s.nickname || s.source || "TBD";
+// 表示は必ず 東南西北（数字は出さない）
+const SEAT_LABEL = ["東", "南", "西", "北"] as const;
+
+// ざっくり固定レイアウト（DOM計測なしで線を引くため）
+const CARD_W = 320;
+const CARD_H = 240;
+const GAP_Y = 28;
+const GAP_X = 170;
+const HEADER_H = 64;
+const ROW_H = 40;
+const ROW_GAP = 10;
+
+function seatName(s: FinalsSeat) {
+  return s.displayName || s.nickname || s.source || "TBD";
+}
+
+function SeatRow({
+  s,
+  isAdv,
+}: {
+  s: FinalsSeat;
+  isAdv: boolean;
+}) {
+  const name = seatName(s);
   const href = playerHref(s.playerId ?? null, null, name);
 
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-black/5 bg-white/60 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-zinc-950/20">
-      <div className="w-6 shrink-0 text-center font-mono text-[10px] text-zinc-500 dark:text-zinc-400">
-        {s.seat + 1}
+    <div
+      className={[
+        "flex items-center gap-2 rounded-2xl border px-2 py-2",
+        "bg-white/60 dark:bg-zinc-950/20",
+        "border-black/5 dark:border-white/10",
+        "h-10",
+        isAdv
+          ? "ring-2 ring-emerald-500/35 border-emerald-500/30 bg-emerald-50/35 dark:bg-emerald-950/10"
+          : "",
+      ].join(" ")}
+    >
+      <div className="w-10 shrink-0 text-center text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+        {SEAT_LABEL[s.seat] ?? "?"}
       </div>
 
       <PlayerAvatar name={name} src={s.image ?? null} size={28} />
 
       <div className="min-w-0 flex-1">
         {s.playerId ? (
-          <Link href={href} className="truncate font-semibold hover:underline">
+          <Link href={href} className="truncate text-sm font-semibold hover:underline">
             {name}
           </Link>
         ) : (
-          <div className="truncate font-semibold text-zinc-600 dark:text-zinc-300">
+          <div className="truncate text-sm font-semibold text-zinc-600 dark:text-zinc-300">
             {name}
           </div>
         )}
         {s.source ? (
-          <div className="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-500">
+          <div className="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-500">
             {s.source}
           </div>
         ) : null}
       </div>
+
+      {isAdv ? <span className={`${pillCls} text-xs`}>進出</span> : null}
     </div>
   );
 }
 
-function ResultBadge({ m }: { m: FinalsMatch }) {
-  if (m.status !== "finished" || !m.result) return null;
-
-  const ws = m.result.winnerSeat;
-  const win = m.seats?.find((x) => x.seat === ws);
-  const winName = win?.displayName || win?.nickname || `Seat${ws + 1}`;
-
-  return (
-    <span className={`${pillCls} text-xs`}>
-      勝者: {winName}
-    </span>
-  );
-}
-
-function MatchCard({ m }: { m: FinalsMatch }) {
+function MatchCard({
+  m,
+  top,
+  left,
+}: {
+  m: FinalsMatch;
+  top: number;
+  left: number;
+}) {
   const status =
-    m.status === "finished" ? "終了" :
-    m.status === "live" ? "LIVE" :
-    m.status === "scheduled" ? "予定" : "未実施";
+    m.status === "finished"
+      ? "終了"
+      : m.status === "live"
+        ? "LIVE"
+        : m.status === "scheduled"
+          ? "予定"
+          : "未実施";
+
+  const advSet = new Set((m.advance ?? []).map((a) => a.fromSeat));
+  const hasAdv = advSet.size > 0;
 
   return (
-    <div className="rounded-2xl border border-black/5 bg-white/70 p-3 shadow-sm dark:border-white/10 dark:bg-zinc-900/50">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link
-            href={`/finals/matches/${encodeURIComponent(m.matchId)}`}
-            className="block truncate text-sm font-semibold hover:underline"
-            title={m.title ?? m.label ?? m.matchId}
-          >
-            {m.tableLabel ? `${m.tableLabel} ` : ""}{m.label ?? m.matchId}
-          </Link>
-          {m.title ? (
-            <div className="mt-1 truncate text-xs text-zinc-600 dark:text-zinc-400">
-              {m.title}
-            </div>
-          ) : null}
+    <div
+      className={[
+        "absolute",
+        "rounded-3xl",
+        hasAdv ? "ring-1 ring-emerald-500/25" : "",
+      ].join(" ")}
+      style={{ top, left, width: CARD_W, height: CARD_H }}
+    >
+      <div className={cardCls + " h-full"}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <Link
+              href={`/finals/matches/${encodeURIComponent(m.matchId)}`}
+              className="block truncate text-sm font-semibold hover:underline"
+              title={m.title ?? m.label ?? m.matchId}
+            >
+              {m.tableLabel ? `${m.tableLabel} ` : ""}
+              {m.label ?? m.matchId}
+            </Link>
+            {m.title ? (
+              <div className="mt-1 truncate text-xs text-zinc-600 dark:text-zinc-400">
+                {m.title}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col items-end gap-1">
+            <span className={pillCls}>{status}</span>
+            {hasAdv ? <span className={`${pillCls} text-xs`}>進出あり</span> : null}
+          </div>
         </div>
 
-        <div className="flex flex-col items-end gap-1">
-          <span className={pillCls}>{status}</span>
-          <ResultBadge m={m} />
+        <div className="mt-3 space-y-2">
+          {(m.seats ?? []).map((s) => (
+            <SeatRow key={`${m.matchId}-${s.seat}`} s={s} isAdv={advSet.has(s.seat)} />
+          ))}
         </div>
-      </div>
-
-      <div className="mt-3 space-y-2">
-        {(m.seats ?? []).map((s) => (
-          <SeatRow key={`${m.matchId}-${s.seat}`} s={s} />
-        ))}
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-3 text-xs">
-        {m.gameUuid ? (
-          <Link href={`/games/${encodeURIComponent(m.gameUuid)}`} className="underline text-zinc-600 dark:text-zinc-400">
-            対局詳細へ
-          </Link>
-        ) : (
-          <span className="text-zinc-500 dark:text-zinc-500">対局UUID未設定</span>
-        )}
-
-        <Link href={`/finals/matches/${encodeURIComponent(m.matchId)}`} className="underline">
-          試合詳細 →
-        </Link>
       </div>
     </div>
   );
+}
+
+type Pos = { roundIdx: number; matchIdx: number; top: number; left: number };
+
+function naturalKey(id: string) {
+  // "QF-10" みたいなものも一応自然ソート寄りに
+  const m = /(\D+)-?(\d+)?/.exec(id);
+  const p = m?.[1] ?? id;
+  const n = m?.[2] ? Number(m[2]) : -1;
+  return { p, n, id };
+}
+
+function orderedMatches(roundId: string, matches: FinalsMatch[]) {
+  // APIの順が良ければそのままでも良いが、ズレた時の保険で roundId + matchId で軽く整列
+  return [...matches].sort((a, b) => {
+    const ka = naturalKey(a.matchId);
+    const kb = naturalKey(b.matchId);
+    if (ka.p !== kb.p) return ka.p.localeCompare(kb.p);
+    if (ka.n !== kb.n) return ka.n - kb.n;
+    return ka.id.localeCompare(kb.id);
+  });
+}
+
+function topFor(roundIdx: number, matchIdx: number) {
+  const step = CARD_H + GAP_Y;
+
+  if (roundIdx === 0) return matchIdx * step;
+
+  const pow = 2 ** roundIdx;
+  const center = (matchIdx * pow + (pow - 1) / 2) * step;
+  return Math.round(center - CARD_H / 2);
+}
+
+function seatYWithinCard(seat: number) {
+  return HEADER_H + seat * (ROW_H + ROW_GAP) + ROW_H / 2;
 }
 
 export default function FinalsBracketView({ bracket }: { bracket: FinalsBracketResponse }) {
-  // 横に長くなるので、モバイルは横スクロールを許可
+  // 表示順（必要ならここだけ差し替え）
+  const roundOrder = ["QF", "SF", "F"] as const;
+
+  const rounds = roundOrder
+    .map((id) => bracket.rounds.find((r) => r.roundId === id))
+    .filter(Boolean);
+
+  // マップ作成（matchId → 位置）
+  const posByMatchId = new Map<string, Pos>();
+  const roundMatches: FinalsMatch[][] = [];
+
+  rounds.forEach((r, roundIdx) => {
+    const ms = orderedMatches(r!.roundId, r!.matches);
+    roundMatches.push(ms);
+
+    ms.forEach((m, matchIdx) => {
+      const top = topFor(roundIdx, matchIdx);
+      const left = roundIdx * (CARD_W + GAP_X);
+      posByMatchId.set(m.matchId, { roundIdx, matchIdx, top, left });
+    });
+  });
+
+  // コンテナ高さ（QFの数を基準に確定）
+  const qfCount = roundMatches[0]?.length ?? 0;
+  const step = CARD_H + GAP_Y;
+  const height = qfCount > 0 ? (qfCount - 1) * step + CARD_H : 520;
+  const width = rounds.length * (CARD_W + GAP_X) - GAP_X + CARD_W;
+
+  // コネクタ生成（advance の fromSeat → toMatchId/toSeat）
+  const connectors: Array<{
+    key: string;
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  }> = [];
+
+  roundMatches.flat().forEach((m) => {
+    const srcPos = posByMatchId.get(m.matchId);
+    if (!srcPos) return;
+
+    (m.advance ?? []).forEach((a) => {
+      const dstPos = posByMatchId.get(a.toMatchId);
+      if (!dstPos) return;
+
+      const x1 = srcPos.left + CARD_W;
+      const y1 = srcPos.top + seatYWithinCard(a.fromSeat);
+
+      const x2 = dstPos.left;
+      const y2 = dstPos.top + seatYWithinCard(a.toSeat);
+
+      connectors.push({
+        key: `${m.matchId}:${a.fromSeat}->${a.toMatchId}:${a.toSeat}`,
+        x1,
+        y1,
+        x2,
+        y2,
+      });
+    });
+  });
+
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[880px]">
-        <div className="grid gap-4 md:grid-cols-3">
-          {bracket.rounds.map((r) => (
-            <div key={r.roundId} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold">{r.label}</div>
-                <span className={`${pillCls} text-xs`}>{r.roundId}</span>
-              </div>
+      <div className="min-w-[980px]">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-sm font-semibold">決勝トーナメント</div>
+          <span className={`${pillCls} text-xs`}>進出者を強調表示</span>
+        </div>
 
-              <div className="space-y-3">
-                {r.matches.map((m) => (
-                  <MatchCard key={m.matchId} m={m} />
-                ))}
-              </div>
+        <div className="rounded-3xl border border-black/5 bg-white/50 p-3 shadow-sm dark:border-white/10 dark:bg-zinc-900/30">
+          {/* ここが「CSSの図」本体：カードは絶対配置、線は div で描画 */}
+          <div className="relative" style={{ width, height }}>
+            {/* 線（水平→垂直→水平） */}
+            {connectors.map((c) => {
+              const midX = Math.round((c.x1 + c.x2) / 2);
+              const left = Math.min(c.x1, c.x2);
+              const right = Math.max(c.x1, c.x2);
+
+              const topY = Math.min(c.y1, c.y2);
+              const botY = Math.max(c.y1, c.y2);
+
+              return (
+                <div key={c.key} className="absolute inset-0 pointer-events-none">
+                  {/* 左水平 */}
+                  <div
+                    className="absolute bg-black/15 dark:bg-white/15"
+                    style={{
+                      left: c.x1,
+                      top: c.y1,
+                      width: midX - c.x1,
+                      height: 2,
+                    }}
+                  />
+                  {/* 垂直 */}
+                  <div
+                    className="absolute bg-black/15 dark:bg-white/15"
+                    style={{
+                      left: midX,
+                      top: topY,
+                      width: 2,
+                      height: botY - topY,
+                    }}
+                  />
+                  {/* 右水平 */}
+                  <div
+                    className="absolute bg-black/15 dark:bg-white/15"
+                    style={{
+                      left: midX,
+                      top: c.y2,
+                      width: c.x2 - midX,
+                      height: 2,
+                    }}
+                  />
+
+                  {/* 端点（小丸） */}
+                  <div
+                    className="absolute rounded-full bg-black/25 dark:bg-white/25"
+                    style={{
+                      left: c.x1 - 3,
+                      top: c.y1 - 3,
+                      width: 6,
+                      height: 6,
+                    }}
+                  />
+                  <div
+                    className="absolute rounded-full bg-black/25 dark:bg-white/25"
+                    style={{
+                      left: c.x2 - 3,
+                      top: c.y2 - 3,
+                      width: 6,
+                      height: 6,
+                    }}
+                  />
+                </div>
+              );
+            })}
+
+            {/* カード */}
+            {roundMatches.flat().map((m) => {
+              const p = posByMatchId.get(m.matchId);
+              if (!p) return null;
+              return <MatchCard key={m.matchId} m={m} top={p.top} left={p.left} />;
+            })}
+
+            {/* 列ラベル（上部） */}
+            <div className="absolute left-0 top-0 -translate-y-[40px] text-xs text-zinc-600 dark:text-zinc-400">
+              1回戦
             </div>
-          ))}
+            {rounds.length > 1 ? (
+              <div
+                className="absolute top-0 -translate-y-[40px] text-xs text-zinc-600 dark:text-zinc-400"
+                style={{ left: 1 * (CARD_W + GAP_X) }}
+              >
+                準決勝
+              </div>
+            ) : null}
+            {rounds.length > 2 ? (
+              <div
+                className="absolute top-0 -translate-y-[40px] text-xs text-zinc-600 dark:text-zinc-400"
+                style={{ left: 2 * (CARD_W + GAP_X) }}
+              >
+                決勝
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">
+            ※「進出」は、この試合の <span className="font-semibold">advance</span> に含まれる席を強調しています。
+          </div>
         </div>
       </div>
     </div>

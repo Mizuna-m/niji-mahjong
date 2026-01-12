@@ -1,66 +1,89 @@
 // src/app/finals/page.tsx
 import Link from "next/link";
-import { fetchTournamentMeta, fetchTournamentKpi, fetchFinalsBracket, fetchFinalsMatches } from "@/lib/api";
-import { cardCls, pillCls } from "@/lib/ui";
+import { fetchFinalsBracket } from "@/lib/api";
 import FinalsBracketView from "@/components/finals/FinalsBracketView";
-import FinalsMatchesTable from "@/components/finals/FinalsMatchesTable";
+import { cardCls, pillCls } from "@/lib/ui";
 
-function fmtUpdatedAtJst(s?: string | null) {
-  if (!s) return "";
-  const d = new Date(s);
-  if (Number.isNaN(d.getTime())) return s;
-  return d.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
-}
+const SEAT_LABEL = ["東", "南", "西", "北"] as const;
 
 export default async function FinalsPage() {
-  const [meta, kpi, bracket, matches] = await Promise.all([
-    fetchTournamentMeta(),
-    fetchTournamentKpi({ phase: "finals" }),
-    fetchFinalsBracket(),
-    fetchFinalsMatches(),
-  ]);
+  const bracket = await fetchFinalsBracket();
+
+  // 決勝（F）が終わっていれば「優勝」、終わってなければ「決勝進出（確定分）」を出す
+  const finalRound = bracket.rounds.find((r) => r.roundId === "F");
+  const finalMatch = finalRound?.matches?.[0];
+
+  const champion =
+    finalMatch?.status === "finished" && finalMatch.result
+      ? finalMatch.seats?.find((s) => s.seat === finalMatch.result?.winnerSeat)
+      : null;
+
+  const finalKnown =
+    finalMatch?.seats?.filter((s) => !!s.playerId) ?? [];
 
   return (
-    <section className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xl font-semibold tracking-tight">決勝トーナメント</div>
+          <h1 className="truncate text-lg font-semibold">決勝トーナメント</h1>
           <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {meta.season} / 決勝（東風）
+            進出者を強調し、線でつながりを見える化します
           </div>
-
-          {bracket.updatedAt ? (
-            <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
-              更新: {fmtUpdatedAtJst(bracket.updatedAt)}
-            </div>
-          ) : null}
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className={pillCls}>消化試合: {kpi.gamesPlayed}{kpi.gamesTotal ? ` / ${kpi.gamesTotal}` : ""}</span>
-          <Link href="/" className="text-sm underline text-zinc-600 dark:text-zinc-400">
-            ← 対局一覧へ
+        <div className="flex items-center gap-2">
+          <Link href="/ranking" className="text-sm underline">
+            ランキングへ
           </Link>
         </div>
       </div>
 
-      {/* トーナメント図 */}
-      <div className={`${cardCls} p-4`}>
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <div className="text-sm font-semibold">トーナメント表</div>
-          <span className={`${pillCls} text-xs`}>/api/tournament/finals/bracket</span>
-        </div>
-        <FinalsBracketView bracket={bracket} />
+      <div className={cardCls + " mb-4"}>
+        {champion ? (
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs text-zinc-600 dark:text-zinc-400">
+                現在の結果
+              </div>
+              <div className="mt-1 text-base font-semibold">
+                優勝：{champion.displayName || champion.nickname || "（不明）"}
+              </div>
+            </div>
+            <span className={`${pillCls} text-xs`}>決勝終了</span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs text-zinc-600 dark:text-zinc-400">
+                決勝の状況
+              </div>
+              <div className="mt-1 text-sm font-semibold">
+                {finalMatch ? "決勝は未終了です" : "決勝カードが未設定です"}
+              </div>
+              {finalKnown.length > 0 ? (
+                <div className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                  確定している席：{" "}
+                  {finalKnown
+                    .map(
+                      (s) =>
+                        `${SEAT_LABEL[s.seat] ?? "?"}：${
+                          s.displayName || s.nickname || "TBD"
+                        }`,
+                    )
+                    .join(" / ")}
+                </div>
+              ) : null}
+            </div>
+            <span className={`${pillCls} text-xs`}>進行中</span>
+          </div>
+        )}
       </div>
 
-      {/* 試合一覧 */}
-      <div className={`${cardCls} p-4`}>
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <div className="text-sm font-semibold">試合一覧</div>
-          <span className={`${pillCls} text-xs`}>/api/tournament/finals/matches</span>
-        </div>
-        <FinalsMatchesTable data={matches} />
+      <FinalsBracketView bracket={bracket} />
+
+      <div className="mt-4 text-xs text-zinc-600 dark:text-zinc-400">
+        ※ 試合カードをタップすると詳細へ移動します。
       </div>
-    </section>
+    </div>
   );
 }
