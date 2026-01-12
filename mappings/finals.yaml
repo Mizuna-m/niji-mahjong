@@ -222,7 +222,7 @@ rounds:
       - matchId: SF-12
         label: 準決勝 4卓（第12試合）
         tableLabel: "SF-12"
-        gameUuid: null
+        gameUuid: "260112-115f0e71-4b95-49dc-a227-e514a5a9dcf6"
         seats:
           - seat: 0
             playerId: AkagiWen
@@ -232,6 +232,10 @@ rounds:
             playerId: HanaMacchia
           - seat: 3
             playerId: Lunlun_nijisanji
+        advance:
+          - fromSeat: 0
+            toMatchId: F
+            toSeat: 3
 
   - roundId: F
     label: 決勝
@@ -248,4 +252,4 @@ rounds:
           - seat: 2
             playerId: KaidaHaru
           - seat: 3
-            source: "SF-12-1st"
+            playerId: AkagiWen
