@@ -94,7 +94,6 @@ function normalizeSeatDisplay(seatSpec, doc) {
   // playerId 直指定
   if (seatSpec?.playerId) {
     const pid = String(seatSpec.playerId);
-    // return { seat, playerId: pid, nickname: null, displayName: null, image: null, source };
     const profile = getPlayerProfile(pid);
     const base = profile
       ? { playerId: profile.playerId, displayName: profile.displayName, image: profile.image, tags: profile.tags }
@@ -161,6 +160,249 @@ function buildResult(doc) {
   };
 }
 
+/**
+ * gameUuids（複数）/ gameUuid（単発）を「埋まっているUUID配列」に正規化
+ * - null/"" は除外
+ */
+function normalizeUuids(m) {
+  const arr = Array.isArray(m.gameUuids)
+    ? m.gameUuids
+    : (m.gameUuid ? [m.gameUuid] : []);
+  return arr.map((x) => (x ? String(x).trim() : "")).filter(Boolean);
+}
+
+function sumScores(listOfScores) {
+  const out = [0, 0, 0, 0];
+  for (const s of listOfScores) {
+    const ns = normalizeScores(s);
+    for (let i = 0; i < 4; i++) out[i] += ns[i];
+  }
+  return out;
+}
+
+function tieTopSeats(totalScores) {
+  const s = normalizeScores(totalScores);
+  const max = Math.max(...s);
+  const seats = [];
+  for (let i = 0; i < 4; i++) if (s[i] === max) seats.push(i);
+  return seats;
+}
+
+function buildAggregateResult(gameResults, requiredGames) {
+  // finished のみ合算（requiredGames未達なら暫定）
+  const finished = gameResults.filter((g) => g.status === "finished" && g.result?.finalScores);
+  const finishedGames = finished.length;
+  if (finishedGames === 0) return null;
+
+  const totalScores = sumScores(finished.map((g) => g.result.finalScores));
+  const placeBySeat = placementByScores(totalScores);
+
+  const tied = tieTopSeats(totalScores);
+  const isTieTop = tied.length >= 2;
+
+  const winnerSeat = isTieTop ? null : winnerSeatByScores(totalScores);
+
+  return {
+    totalScores,
+    placeBySeat,
+    winnerSeat,
+    finishedGames,
+    requiredGames,
+    isTieTop,
+    tieTopSeats: isTieTop ? tied : [],
+  };
+}
+
+/**
+ * matchSpec（yamlの1match定義）からAPI出力用のmatchを組み立てる（共通）
+ * - 単発: gameUuid
+ * - 複数: gameUuids / games[] / aggregateResult
+ */
+async function buildMatchOut(mongo, matchSpec) {
+  const seatSpecs = Array.isArray(matchSpec.seats) ? matchSpec.seats : [];
+  const uuidList = normalizeUuids(matchSpec);
+
+  // requiredGames: 未指定なら 1（単発戦前提）、ただし複数指定があるなら 2 をデフォルトに寄せる
+  const requiredGames =
+    Number.isFinite(Number(matchSpec.requiredGames))
+      ? Number(matchSpec.requiredGames)
+      : (Array.isArray(matchSpec.gameUuids) ? 2 : 1);
+
+  // games[]（埋まってるUUID分だけ作る）
+  const games = [];
+  for (let i = 0; i < uuidList.length; i++) {
+    const uuid = uuidList[i];
+    const doc = await findDerivedByUuid(mongo, uuid);
+    const meta = resolveGameMeta(uuid);
+    games.push({
+      gameUuid: uuid,
+      status: statusOf(doc),
+      startTime: doc?.startTime ?? null,
+      endTime: doc?.endTime ?? null,
+      title: meta.title ?? null,
+      tableLabel: meta.tableLabel ?? null,
+      result: buildResult(doc),
+    });
+  }
+
+  // seats は「最新のdoc」から拾えると嬉しいので、最後に終わったgameを優先してdocを選ぶ
+  let seatDoc = null;
+  if (games.length > 0) {
+    // finished を優先して、その中で startTime が大きいもの（=新しい）を選ぶ
+    const cand = games
+      .map((g) => ({ g, t: g.startTime ?? 0, fin: g.status === "finished" ? 1 : 0 }))
+      .sort((a, b) => (b.fin - a.fin) || (b.t - a.t));
+    const bestUuid = cand[0]?.g?.gameUuid ?? null;
+    seatDoc = bestUuid ? await findDerivedByUuid(mongo, bestUuid) : null;
+  } else {
+    // 後方互換（単発）: uuidが空でも seatDoc は null のまま
+    seatDoc = null;
+  }
+
+  const seats = seatSpecs
+    .slice()
+    .sort((a, b) => Number(a.seat) - Number(b.seat))
+    .map((s) => normalizeSeatDisplay(s, seatDoc));
+
+  // aggregateResult（複数戦 or requiredGames>1 のときだけ作る）
+  // const aggregateResult =
+  //   (requiredGames >= 2 || Array.isArray(matchSpec.gameUuids))
+  //     ? buildAggregateResult(games, requiredGames)
+  //     : null;
+  const isMulti = requiredGames >= 2 || Array.isArray(matchSpec.gameUuids);
+  let aggregateResult = null;
+  if (isMulti) {
+    const allHavePlayerId = seatSpecs.every((s) => !!s?.playerId);
+    if (allHavePlayerId) {
+      aggregateResult = await buildAggregateResultByPlayer(mongo, games, matchSpec, requiredGames);
+    } else {
+      aggregateResult = buildAggregateResult(games, requiredGames); // 従来（seat合算）
+    }
+  }
+
+  // status: live があれば live
+  let status = "unplayed";
+  if (games.some((g) => g.status === "live")) {
+    status = "live";
+  } else if (aggregateResult) {
+    if (aggregateResult.finishedGames >= requiredGames && aggregateResult.isTieTop) {
+      status = "tiebreak";
+    } else if (aggregateResult.winnerSlot !== null && aggregateResult.finishedGames >= requiredGames) {
+      status = "finished";
+    } else if (aggregateResult.finishedGames > 0) {
+      status = "scheduled";
+    } else {
+      status = "unplayed";
+    }
+  } else if (games.length === 1) {
+    // 単発戦
+    status = games[0].status;
+  } else {
+    // UUID未設定
+    status = "unplayed";
+  }
+
+  // start/end は複数戦なら範囲で返す（最小/最大）
+  const startTime = games.length ? Math.min(...games.map((g) => g.startTime ?? Infinity).filter(Number.isFinite)) : null;
+  const endTime = games.length ? Math.max(...games.map((g) => g.endTime ?? -Infinity).filter(Number.isFinite)) : null;
+
+  // title/tableLabel は、単発はゲーム由来、複数はmatchSpec優先
+  const baseMeta =
+    (matchSpec.gameUuid ? resolveGameMeta(matchSpec.gameUuid) : null) ||
+    (uuidList[0] ? resolveGameMeta(uuidList[0]) : null) ||
+    { tableLabel: null, title: null };
+
+  const tableLabel = matchSpec.tableLabel ?? baseMeta.tableLabel ?? null;
+  const title = (matchSpec.label ?? baseMeta.title ?? matchSpec.matchId);
+
+  return {
+    matchId: matchSpec.matchId,
+    label: matchSpec.label ?? null,
+    tableLabel,
+    title,
+    // 後方互換
+    gameUuid: matchSpec.gameUuid ?? (uuidList.length === 1 ? uuidList[0] : null),
+    // 新: 複数戦
+    gameUuids: Array.isArray(matchSpec.gameUuids) ? matchSpec.gameUuids : (uuidList.length ? uuidList : null),
+    requiredGames,
+    games,
+    aggregateResult,
+    status,
+    startTime: Number.isFinite(startTime) ? startTime : null,
+    endTime: Number.isFinite(endTime) ? endTime : null,
+    seats,
+    // 単発戦の result は従来互換のため残す（複数戦では null）
+    result: (uuidList.length === 1 ? games[0]?.result ?? null : null),
+    advance: Array.isArray(matchSpec.advance) ? matchSpec.advance : [],
+  };
+}
+
+function seatToPlayerIdMapFromDoc(doc) {
+  // seat(0..3) -> playerId
+  const map = new Map();
+  const players = Array.isArray(doc?.players) ? doc.players : [];
+  for (const p of players) {
+    const seat = Number(p?.seat);
+    if (!Number.isFinite(seat)) continue;
+    const nick = String(p?.nickname ?? "").trim();
+    if (!nick) continue;
+    const r = resolvePlayerByNickname(nick); // nickname -> playerId
+    if (r?.playerId) map.set(seat, r.playerId);
+  }
+  return map;
+}
+
+async function buildAggregateResultByPlayer(mongo, games, matchSpec, requiredGames) {
+  const seatSpecs = Array.isArray(matchSpec.seats) ? matchSpec.seats : [];
+
+  // slot(=0..3) -> playerId（決勝は playerId 直指定前提）
+  const playerIdBySlot = seatSpecs
+    .slice()
+    .sort((a, b) => Number(a.seat) - Number(b.seat))
+    .map((s) => (s.playerId ? String(s.playerId) : null));
+
+  // playerId -> slot
+  const slotByPlayerId = new Map();
+  for (let slot = 0; slot < playerIdBySlot.length; slot++) {
+    const pid = playerIdBySlot[slot];
+    if (pid) slotByPlayerId.set(pid, slot);
+  }
+
+  const finished = games.filter((g) => g.status === "finished" && g.result?.finalScores && g.gameUuid);
+  const finishedGames = finished.length;
+  if (finishedGames === 0) return null;
+
+  const totalScoresBySlot = [0, 0, 0, 0];
+
+  for (const g of finished) {
+    const doc = await findDerivedByUuid(mongo, g.gameUuid);
+    const seatToPid = seatToPlayerIdMapFromDoc(doc);
+
+    const scores = normalizeScores(g.result.finalScores);
+
+    for (let seat = 0; seat < 4; seat++) {
+      const pid = seatToPid.get(seat);
+      const slot = pid ? slotByPlayerId.get(pid) : undefined;
+      if (typeof slot === "number") {
+        totalScoresBySlot[slot] += scores[seat];
+      }
+    }
+  }
+
+  const tied = tieTopSeats(totalScoresBySlot);
+  const isTieTop = tied.length >= 2;
+  const winnerSlot = isTieTop ? null : winnerSeatByScores(totalScoresBySlot); // 0..3
+
+  return {
+    totalScoresBySlot,
+    winnerSlot,
+    finishedGames,
+    requiredGames,
+    isTieTop,
+    tieTopSlots: isTieTop ? tied : [],
+  };
+}
+
 function mountFinalsRoutes(app, { mongo }) {
   // GET /api/tournament/finals/bracket
   app.get("/api/tournament/finals/bracket", async (_req, res) => {
@@ -175,31 +417,8 @@ function mountFinalsRoutes(app, { mongo }) {
       const outMatches = [];
 
       for (const m of matches) {
-        const uuid = m.gameUuid || null;
-        const doc = await findDerivedByUuid(mongo, uuid);
-        const meta = uuid
-          ? resolveGameMeta(uuid)
-          : { tableLabel: m.tableLabel ?? null, title: m.label ?? null };
-
-        const seatSpecs = Array.isArray(m.seats) ? m.seats : [];
-        const seats = seatSpecs
-          .slice()
-          .sort((a, b) => Number(a.seat) - Number(b.seat))
-          .map((s) => normalizeSeatDisplay(s, doc));
-
-        outMatches.push({
-          matchId: m.matchId,
-          label: m.label ?? null,
-          tableLabel: m.tableLabel ?? meta.tableLabel ?? null,
-          title: meta.title ?? m.label ?? m.matchId,
-          gameUuid: uuid,
-          status: statusOf(doc),
-          startTime: doc?.startTime ?? null,
-          endTime: doc?.endTime ?? null,
-          seats,
-          result: buildResult(doc),
-          advance: Array.isArray(m.advance) ? m.advance : [],
-        });
+        const out = await buildMatchOut(mongo, m);
+        outMatches.push(out);
       }
 
       outRounds.push({
@@ -223,25 +442,31 @@ function mountFinalsRoutes(app, { mongo }) {
 
     const rounds = Array.isArray(finals.rounds) ? finals.rounds : [];
     const items = [];
+
     for (const r of rounds) {
       for (const m of Array.isArray(r.matches) ? r.matches : []) {
-        const uuid = m.gameUuid || null;
-        const doc = await findDerivedByUuid(mongo, uuid);
+        const out = await buildMatchOut(mongo, m);
         items.push({
           roundId: r.roundId ?? null,
           roundLabel: r.label ?? null,
-          matchId: m.matchId,
-          label: m.label ?? null,
-          tableLabel: m.tableLabel ?? null,
-          gameUuid: uuid,
-          status: statusOf(doc),
-          startTime: doc?.startTime ?? null,
-          endTime: doc?.endTime ?? null,
+          matchId: out.matchId,
+          label: out.label ?? null,
+          tableLabel: out.tableLabel ?? null,
+          // 一覧は代表UUIDを持たせる（単発互換）
+          gameUuid: out.gameUuid ?? null,
+          status: out.status,
+          startTime: out.startTime ?? null,
+          endTime: out.endTime ?? null,
+          // 将来のUI用（必要なら）
+          requiredGames: out.requiredGames ?? null,
+          finishedGames: out.aggregateResult?.finishedGames ?? (out.status === "finished" ? 1 : 0),
+          isTieTop: out.aggregateResult?.isTieTop ?? false,
         });
       }
     }
 
-    const order = { live: 0, unplayed: 1, finished: 2 };
+    // 並び順: live → tiebreak → scheduled(途中) → unplayed → finished
+    const order = { live: 0, tiebreak: 1, scheduled: 2, unplayed: 3, finished: 4 };
     items.sort((a, b) => {
       const da = order[a.status] ?? 9;
       const db = order[b.status] ?? 9;
@@ -265,47 +490,26 @@ function mountFinalsRoutes(app, { mongo }) {
 
     const rounds = Array.isArray(finals.rounds) ? finals.rounds : [];
     let round = null;
-    let match = null;
+    let matchSpec = null;
 
     for (const r of rounds) {
       const ms = Array.isArray(r.matches) ? r.matches : [];
       const hit = ms.find((x) => String(x.matchId) === matchId);
       if (hit) {
         round = r;
-        match = hit;
+        matchSpec = hit;
         break;
       }
     }
-    if (!match) return res.status(404).json({ error: "match not found" });
+    if (!matchSpec) return res.status(404).json({ error: "match not found" });
 
-    const uuid = match.gameUuid || null;
-    const doc = await findDerivedByUuid(mongo, uuid);
-    const meta = uuid
-      ? resolveGameMeta(uuid)
-      : { tableLabel: match.tableLabel ?? null, title: match.label ?? null };
-
-    const seats = (Array.isArray(match.seats) ? match.seats : [])
-      .slice()
-      .sort((a, b) => Number(a.seat) - Number(b.seat))
-      .map((s) => normalizeSeatDisplay(s, doc));
+    const out = await buildMatchOut(mongo, matchSpec);
 
     res.json({
       phase: "finals",
       updatedAt: finals.updatedAt ?? null,
       round: { roundId: round?.roundId ?? null, label: round?.label ?? null },
-      match: {
-        matchId: match.matchId,
-        label: match.label ?? null,
-        tableLabel: match.tableLabel ?? meta.tableLabel ?? null,
-        title: meta.title ?? match.label ?? match.matchId,
-        gameUuid: uuid,
-        status: statusOf(doc),
-        startTime: doc?.startTime ?? null,
-        endTime: doc?.endTime ?? null,
-        seats,
-        result: buildResult(doc),
-        advance: Array.isArray(match.advance) ? match.advance : [],
-      },
+      match: out,
     });
   });
 }

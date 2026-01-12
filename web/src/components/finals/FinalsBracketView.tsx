@@ -1,16 +1,19 @@
 // src/components/finals/FinalsBracketView.tsx
 import Link from "next/link";
-import type {
-  FinalsBracketResponse,
-  FinalsMatch,
-  FinalsSeat,
-} from "@/lib/typesTournament";
+import type { FinalsBracketResponse, FinalsMatch, FinalsSeat } from "@/lib/typesTournament";
 import { cardCls, pillCls } from "@/lib/ui";
 import PlayerAvatar from "@/components/PlayerAvatar";
 import { playerHref } from "@/lib/playerLink";
 
 // 表示は必ず 東南西北（数字は出さない）
 const SEAT_LABEL = ["東", "南", "西", "北"] as const;
+const RANK_LABEL = ["1位", "2位", "3位", "4位"] as const;
+
+function seatLabel(matchId: string, seat: number) {
+  // 決勝だけ順位表示（matchId === "F" 前提）
+  const arr = matchId === "F" ? RANK_LABEL : SEAT_LABEL;
+  return (arr as any)[seat] ?? "?";
+}
 
 // ざっくり固定レイアウト（DOM計測なしで線を引くため）
 const CARD_W = 320;
@@ -25,12 +28,35 @@ function seatName(s: FinalsSeat) {
   return s.displayName || s.nickname || s.source || "TBD";
 }
 
+function safeNumber(n: unknown): number | null {
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
+function getAggregateRawPoints(m: any): number[] | null {
+  // 案A: 決勝のみ複数半荘を束ねた合計 “素点”
+  // 期待形: m.aggregateResult.totalRawPointsBySeat: number[4]
+  const arr =
+    m?.aggregateResult?.totalScoresBySlot ??
+    m?.aggregateResult?.totalRawPointsBySeat ??
+    m?.aggregateResult?.totalRawPoints ??
+    null;
+
+  if (!Array.isArray(arr) || arr.length !== 4) return null;
+  const nums = arr.map((v: any) => safeNumber(v));
+  if (nums.some((v) => v === null)) return null;
+  return nums as number[];
+}
+
 function SeatRow({
+  matchId,
   s,
   isAdv,
+  rawPoint,
 }: {
+  matchId: string;
   s: FinalsSeat;
   isAdv: boolean;
+  rawPoint?: number | null;
 }) {
   const name = seatName(s);
   const href = playerHref(s.playerId ?? null, null, name);
@@ -48,7 +74,7 @@ function SeatRow({
       ].join(" ")}
     >
       <div className="w-10 shrink-0 text-center text-sm font-semibold text-zinc-600 dark:text-zinc-300">
-        {SEAT_LABEL[s.seat] ?? "?"}
+        {seatLabel(matchId, s.seat)}
       </div>
 
       <PlayerAvatar name={name} src={s.image ?? null} size={28} />
@@ -69,6 +95,13 @@ function SeatRow({
           </div>
         ) : null}
       </div>
+
+      {/* 決勝(2戦以上)のときだけ素点合計を見せる（数値は右端に小さく） */}
+      {rawPoint != null ? (
+        <div className="shrink-0 tabular-nums text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+          {rawPoint}
+        </div>
+      ) : null}
 
       {isAdv ? <span className={`${pillCls} text-xs`}>進出</span> : null}
     </div>
@@ -91,10 +124,15 @@ function MatchCard({
         ? "LIVE"
         : m.status === "scheduled"
           ? "予定"
-          : "未実施";
+          : m.status === "tiebreak"
+            ? "同点"
+            : "未実施";
 
   const advSet = new Set((m.advance ?? []).map((a) => a.fromSeat));
   const hasAdv = advSet.size > 0;
+
+  const agg = getAggregateRawPoints(m);
+  const showAgg = agg && (m.status === "finished" || m.status === "live" || m.status === "tiebreak");
 
   return (
     <div
@@ -126,12 +164,25 @@ function MatchCard({
           <div className="flex flex-col items-end gap-1">
             <span className={pillCls}>{status}</span>
             {hasAdv ? <span className={`${pillCls} text-xs`}>進出あり</span> : null}
+
+            {/* 同点なら第3戦の可能性メモ */}
+            {m.status === "tiebreak" ? (
+              <div className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                同点発生
+              </div>
+            ) : null}
           </div>
         </div>
 
         <div className="mt-3 space-y-2">
-          {(m.seats ?? []).map((s) => (
-            <SeatRow key={`${m.matchId}-${s.seat}`} s={s} isAdv={advSet.has(s.seat)} />
+          {(m.seats ?? []).map((s: any) => (
+            <SeatRow
+              key={`${m.matchId}-${s.seat}`}
+              matchId={m.matchId}
+              s={s}
+              isAdv={advSet.has(s.seat)}
+              rawPoint={showAgg ? agg?.[s.seat] ?? null : null}
+            />
           ))}
         </div>
       </div>
@@ -139,6 +190,7 @@ function MatchCard({
   );
 }
 
+// 以下（レイアウト計算・round描画など）は既存のまま
 type Pos = { roundIdx: number; matchIdx: number; top: number; left: number };
 
 function naturalKey(id: string) {

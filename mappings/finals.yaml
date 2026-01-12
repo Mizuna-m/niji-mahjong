@@ -243,13 +243,16 @@ rounds:
       - matchId: F
         label: 決勝（第13試合）
         tableLabel: "F"
-        gameUuid: null
+        gameUuids:
+          - "260112-d71b7a92-5105-4534-851a-43aaf56aa356"
+          - "260112-90384ccd-c065-4565-a019-dfd6acd20dbe"
+        requiredGames: 2
         seats:
           - seat: 0
-            playerId: SukoyaKana
-          - seat: 1
-            playerId: JoeRikiichi
-          - seat: 2
             playerId: KaidaHaru
-          - seat: 3
+          - seat: 1
             playerId: AkagiWen
+          - seat: 2
+            playerId: JoeRikiichi
+          - seat: 3
+            playerId: SukoyaKana

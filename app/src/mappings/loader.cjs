@@ -88,15 +88,49 @@ function normalizeFinalsYaml(doc) {
 
     for (const m of matches) {
       if (!m || typeof m !== "object") continue;
+
       const matchId = String(m.matchId || "").trim();
       if (!matchId) continue;
 
+      // gameUuids: 配列 or 文字列(カンマ区切り)を許容して正規化
+      const rawGameUuids = m.gameUuids;
+      const gameUuids = Array.isArray(rawGameUuids)
+        ? rawGameUuids
+            .flatMap((x) => String(x || "").split(","))
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : (typeof rawGameUuids === "string"
+            ? rawGameUuids
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : null);
+
+      // 後方互換: 単発gameUuid（ただし誤って "uuid1,uuid2" が来ても救済）
+      const gameUuid =
+        m.gameUuid && String(m.gameUuid).trim()
+          ? String(m.gameUuid).trim()
+          : null;
+
+      // requiredGames: 明示があれば優先、なければ複数戦なら2、単発なら1
+      const requiredGames = Number.isFinite(Number(m.requiredGames))
+        ? Number(m.requiredGames)
+        : (gameUuids && gameUuids.length > 0 ? 2 : 1);
+
       const seats = Array.isArray(m.seats) ? m.seats : [];
+
       outMatches.push({
         matchId,
         label: m.label ? String(m.label) : undefined,
         tableLabel: m.tableLabel ? String(m.tableLabel) : undefined,
-        gameUuid: m.gameUuid ? String(m.gameUuid) : null,
+
+        // 互換保持
+        gameUuid,
+
+        // ★追加
+        gameUuids: gameUuids && gameUuids.length > 0 ? gameUuids : null,
+        requiredGames,
+
         seats: seats
           .filter((s) => s && typeof s === "object" && Number.isFinite(Number(s.seat)))
           .map((s) => ({

@@ -60,7 +60,64 @@ export type WildcardResponse = {
 
 export type FinalsPhase = "finals";
 
-export type FinalsMatchStatus = "unplayed" | "scheduled" | "live" | "finished";
+export type FinalsMatchStatus = "unplayed" | "scheduled" | "live" | "finished" | "tiebreak";
+
+export type FinalsMatchResult = {
+  finalScores: number[];
+  placeBySeat: number[];
+  winnerSeat: 0 | 1 | 2 | 3;
+  deltaBySeat: number[];
+};
+
+export type FinalsAggregateResult = {
+  totalScoresBySlot: number[];        // 合算素点
+  placeBySeat: number[];
+  winnerSlot?: 0 | 1 | 2 | 3 | null; // 同点で未確定なら null
+  finishedGames: number;        // 何戦終わっているか
+  requiredGames: number;        // 通常 2
+  isTieTop: boolean;            // 1位同点か
+  tieTopSlots?: Array<0|1|2|3>; // 同点席
+};
+
+export type FinalsMatchGame = {
+  gameUuid: string;
+  status: FinalsMatchStatus; // unplayed/live/finished など
+  startTime?: number | null;
+  endTime?: number | null;
+  title?: string | null;
+  tableLabel?: string | null;
+  result?: FinalsMatchResult | null;
+};
+
+export type FinalsMatch = {
+  matchId: string;
+  label?: string | null;
+  tableLabel?: string | null;
+  title?: string | null;
+
+  // 後方互換（単発戦）
+  gameUuid?: string | null;
+
+  // 複数戦（決勝用）
+  gameUuids?: Array<string | null> | null;
+  requiredGames?: number | null;
+  games?: FinalsMatchGame[];
+
+  status: FinalsMatchStatus;
+
+  startTime?: number | null;
+  endTime?: number | null;
+
+  seats: FinalsSeat[];
+
+  // 単発戦の result
+  result?: FinalsMatchResult | null;
+
+  // 複数戦の合算
+  aggregateResult?: FinalsAggregateResult | null;
+
+  advance?: any[];
+};
 
 /** bracket 内の seat 情報（未確定枠は source を使う） */
 export type FinalsSeat = {
@@ -77,33 +134,6 @@ export type FinalsSeat = {
 
   // 例: "Q-A", "WC-1", "SF1-1st" など
   source?: string | null;
-};
-
-export type FinalsMatchResult = {
-  finalScores: number[];      // len=4
-  placeBySeat: number[];      // len=4 (1..4)
-  winnerSeat: 0 | 1 | 2 | 3;
-  deltaBySeat: number[];      // len=4
-};
-
-export type FinalsMatch = {
-  matchId: string;
-  label?: string | null;
-  tableLabel?: string | null;
-  title?: string | null;
-
-  gameUuid?: string | null;
-  status: FinalsMatchStatus;
-
-  startTime?: number | null; // unix sec
-  endTime?: number | null;   // unix sec
-
-  seats: FinalsSeat[];
-
-  result?: FinalsMatchResult | null;
-
-  // 将来用（いまは空配列でもOK）
-  advance?: any[];
 };
 
 export type FinalsRound = {
