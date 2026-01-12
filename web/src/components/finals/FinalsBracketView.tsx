@@ -1,346 +1,375 @@
-// src/components/finals/FinalsBracketView.tsx
+// src/components/FinalsBracketView.tsx
 import Link from "next/link";
 import type {
   FinalsBracketResponse,
-  FinalsMatch,
-  FinalsSeat,
+  FinalsBracketMatch,
+  FinalsBracketSeat,
+  FinalsBracketResult,
 } from "@/lib/typesTournament";
 import { cardCls, pillCls } from "@/lib/ui";
 import PlayerAvatar from "@/components/PlayerAvatar";
-import { playerHref } from "@/lib/playerLink";
 
-// 表示は必ず 東南西北（数字は出さない）
-const SEAT_LABEL = ["東", "南", "西", "北"] as const;
+const WIND = ["東", "南", "西", "北"] as const;
 
-// ざっくり固定レイアウト（DOM計測なしで線を引くため）
-const CARD_W = 320;
-const CARD_H = 240;
-const GAP_Y = 28;
-const GAP_X = 170;
-const HEADER_H = 64;
-const ROW_H = 40;
-const ROW_GAP = 10;
+function scoreTone(n: number) {
+  if (n >= 40000) return "text-emerald-700 dark:text-emerald-300";
+  if (n >= 30000) return "text-sky-700 dark:text-sky-300";
+  if (n <= 0) return "text-rose-700 dark:text-rose-300";
+  return "text-zinc-700 dark:text-zinc-300";
+}
 
-function seatName(s: FinalsSeat) {
-  return s.displayName || s.nickname || s.source || "TBD";
+function rankBadgeCls(rank: number) {
+  if (rank === 1) return "bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100";
+  if (rank === 2) return "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/40 dark:text-zinc-100";
+  if (rank === 3) return "bg-orange-50 text-orange-900 dark:bg-orange-900/20 dark:text-orange-100";
+  return "bg-rose-50 text-rose-900 dark:bg-rose-900/20 dark:text-rose-100";
+}
+
+function placeBySeatToRank(placeBySeat: number[] | null | undefined, seat: number): number | null {
+  // placeBySeat は 1..4 の配列想定（サンプルより）
+  if (!Array.isArray(placeBySeat)) return null;
+  const p = placeBySeat[seat];
+  if (typeof p !== "number") return null;
+  return p;
+}
+
+function safeScores(result?: FinalsBracketResult | null) {
+  const scores = result?.finalScores;
+  if (!Array.isArray(scores) || scores.length !== 4) return null;
+  return scores as number[];
+}
+
+/**
+ * Finals がシリーズになる想定
+ * - 互換性のため、match に gameUuid しか無い場合は「1戦だけ」として扱う
+ * - 将来的に match.gameUuids / match.games が生えたらそちら優先
+ */
+function extractGameUuids(m: any): string[] {
+  if (Array.isArray(m?.gameUuids)) return m.gameUuids.filter(Boolean);
+  if (Array.isArray(m?.games)) return m.games.map((g: any) => g?.gameUuid).filter(Boolean);
+  return m?.gameUuid ? [m.gameUuid] : [];
+}
+
+type SeriesGame = {
+  gameUuid: string | null;
+  // ブラケット側で result が取れるなら順位バッジに使う
+  result: FinalsBracketResult | null;
+  seats: FinalsBracketSeat[]; // playerId で突合
+};
+
+function extractSeriesGames(match: any): SeriesGame[] {
+  // 1) match.games があればそれを使う（将来拡張用）
+  if (Array.isArray(match?.games) && match.games.length) {
+    return match.games.map((g: any) => ({
+      gameUuid: g?.gameUuid ?? null,
+      result: g?.result ?? null,
+      seats: (g?.seats ?? []) as FinalsBracketSeat[],
+    }));
+  }
+
+  // 2) gameUuids だけ来る場合（result は無い）
+  if (Array.isArray(match?.gameUuids) && match.gameUuids.length) {
+    return match.gameUuids.map((u: any) => ({
+      gameUuid: u ?? null,
+      result: null,
+      seats: (match?.seats ?? []) as FinalsBracketSeat[],
+    }));
+  }
+
+  // 3) 従来形式（単発）
+  return [
+    {
+      gameUuid: match?.gameUuid ?? null,
+      result: match?.result ?? null,
+      seats: (match?.seats ?? []) as FinalsBracketSeat[],
+    },
+  ];
 }
 
 function SeatRow({
+  seat,
   s,
-  isAdv,
+  showWind,
+  badge,
+  right,
 }: {
-  s: FinalsSeat;
-  isAdv: boolean;
+  seat: number;
+  s: FinalsBracketSeat;
+  showWind: boolean;
+  badge?: React.ReactNode;
+  right?: React.ReactNode;
 }) {
-  const name = seatName(s);
-  const href = playerHref(s.playerId ?? null, null, name);
+  const labelLeft = showWind ? WIND[seat] : null;
 
   return (
-    <div
-      className={[
-        "flex items-center gap-2 rounded-2xl border px-2 py-2",
-        "bg-white/60 dark:bg-zinc-950/20",
-        "border-black/5 dark:border-white/10",
-        "h-10",
-        isAdv
-          ? "ring-2 ring-emerald-500/35 border-emerald-500/30 bg-emerald-50/35 dark:bg-emerald-950/10"
-          : "",
-      ].join(" ")}
-    >
-      <div className="w-10 shrink-0 text-center text-sm font-semibold text-zinc-600 dark:text-zinc-300">
-        {SEAT_LABEL[s.seat] ?? "?"}
+    <div className="flex items-center gap-2">
+      <div className="w-9 shrink-0 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+        {labelLeft ?? ""}
       </div>
 
-      <PlayerAvatar name={name} src={s.image ?? null} size={28} />
+      <PlayerAvatar
+        playerId={s.playerId ?? undefined}
+        name={s.displayName ?? s.nickname ?? "TBD"}
+        src={s.image ?? null}
+        size={28}
+      />
 
       <div className="min-w-0 flex-1">
-        {s.playerId ? (
-          <Link href={href} className="truncate text-sm font-semibold hover:underline">
-            {name}
-          </Link>
-        ) : (
-          <div className="truncate text-sm font-semibold text-zinc-600 dark:text-zinc-300">
-            {name}
-          </div>
-        )}
-        {s.source ? (
-          <div className="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-500">
-            {s.source}
-          </div>
-        ) : null}
+        <div className="truncate text-sm font-medium">
+          {s.displayName ?? s.nickname ?? "未確定"}
+        </div>
       </div>
 
-      {isAdv ? <span className={`${pillCls} text-xs`}>進出</span> : null}
+      {badge ? <div className="shrink-0">{badge}</div> : null}
+      {right ? <div className="shrink-0">{right}</div> : null}
     </div>
   );
 }
 
-function MatchCard({
-  m,
-  top,
-  left,
-}: {
-  m: FinalsMatch;
-  top: number;
-  left: number;
-}) {
-  const status =
-    m.status === "finished"
-      ? "終了"
-      : m.status === "live"
-        ? "LIVE"
-        : m.status === "scheduled"
-          ? "予定"
-          : "未実施";
-
-  const advSet = new Set((m.advance ?? []).map((a) => a.fromSeat));
-  const hasAdv = advSet.size > 0;
-
+function AdvancementBadge({ active }: { active: boolean }) {
+  if (!active) return null;
   return (
-    <div
-      className={[
-        "absolute",
-        "rounded-3xl",
-        hasAdv ? "ring-1 ring-emerald-500/25" : "",
-      ].join(" ")}
-      style={{ top, left, width: CARD_W, height: CARD_H }}
-    >
-      <div className={cardCls + " h-full"}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <Link
-              href={`/finals/matches/${encodeURIComponent(m.matchId)}`}
-              className="block truncate text-sm font-semibold hover:underline"
-              title={m.title ?? m.label ?? m.matchId}
-            >
-              {m.tableLabel ? `${m.tableLabel} ` : ""}
-              {m.label ?? m.matchId}
-            </Link>
-            {m.title ? (
-              <div className="mt-1 truncate text-xs text-zinc-600 dark:text-zinc-400">
-                {m.title}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="flex flex-col items-end gap-1">
-            <span className={pillCls}>{status}</span>
-            {hasAdv ? <span className={`${pillCls} text-xs`}>進出あり</span> : null}
-          </div>
-        </div>
-
-        <div className="mt-3 space-y-2">
-          {(m.seats ?? []).map((s) => (
-            <SeatRow key={`${m.matchId}-${s.seat}`} s={s} isAdv={advSet.has(s.seat)} />
-          ))}
-        </div>
-      </div>
-    </div>
+    <span className={`${pillCls} bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-100`}>
+      進出
+    </span>
   );
 }
 
-type Pos = { roundIdx: number; matchIdx: number; top: number; left: number };
+function FinalsSeriesCard({ match }: { match: FinalsBracketMatch }) {
+  const games = extractSeriesGames(match as any);
 
-function naturalKey(id: string) {
-  // "QF-10" みたいなものも一応自然ソート寄りに
-  const m = /(\D+)-?(\d+)?/.exec(id);
-  const p = m?.[1] ?? id;
-  const n = m?.[2] ? Number(m[2]) : -1;
-  return { p, n, id };
-}
+  // プレイヤー行の固定順序は match.seats を採用（要求通り）
+  const fixed = (match.seats ?? []) as FinalsBracketSeat[];
 
-function orderedMatches(roundId: string, matches: FinalsMatch[]) {
-  // APIの順が良ければそのままでも良いが、ズレた時の保険で roundId + matchId で軽く整列
-  return [...matches].sort((a, b) => {
-    const ka = naturalKey(a.matchId);
-    const kb = naturalKey(b.matchId);
-    if (ka.p !== kb.p) return ka.p.localeCompare(kb.p);
-    if (ka.n !== kb.n) return ka.n - kb.n;
-    return ka.id.localeCompare(kb.id);
+  // playerId → index を作る（未確定 null は突合しない）
+  const idxByPlayer = new Map<string, number>();
+  fixed.forEach((p, i) => {
+    if (p?.playerId) idxByPlayer.set(p.playerId, i);
   });
-}
 
-function topFor(roundIdx: number, matchIdx: number) {
-  const step = CARD_H + GAP_Y;
+  // 合計素点 & 各半荘順位（分かる範囲で）
+  const total = new Array(fixed.length).fill(0);
+  const ranksPerGame: (number | null)[][] = games.map(() => new Array(fixed.length).fill(null));
 
-  if (roundIdx === 0) return matchIdx * step;
+  games.forEach((g, gi) => {
+    const scores = safeScores(g.result);
+    const placeBySeat = g.result?.placeBySeat;
 
-  const pow = 2 ** roundIdx;
-  const center = (matchIdx * pow + (pow - 1) / 2) * step;
-  return Math.round(center - CARD_H / 2);
-}
+    // result が無い場合（UUIDのみで未集計）はスキップ
+    if (!scores || !Array.isArray(placeBySeat)) return;
 
-function seatYWithinCard(seat: number) {
-  return HEADER_H + seat * (ROW_H + ROW_GAP) + ROW_H / 2;
-}
+    // g.seats の seat 番号に紐づく playerId で fixed に割り当て
+    g.seats.forEach((seatInfo, seat) => {
+      const pid = seatInfo?.playerId;
+      if (!pid) return;
+      const idx = idxByPlayer.get(pid);
+      if (idx === undefined) return;
 
-export default function FinalsBracketView({ bracket }: { bracket: FinalsBracketResponse }) {
-  // 表示順（必要ならここだけ差し替え）
-  const roundOrder = ["QF", "SF", "F"] as const;
-
-  const rounds = roundOrder
-    .map((id) => bracket.rounds.find((r) => r.roundId === id))
-    .filter(Boolean);
-
-  // マップ作成（matchId → 位置）
-  const posByMatchId = new Map<string, Pos>();
-  const roundMatches: FinalsMatch[][] = [];
-
-  rounds.forEach((r, roundIdx) => {
-    const ms = orderedMatches(r!.roundId, r!.matches);
-    roundMatches.push(ms);
-
-    ms.forEach((m, matchIdx) => {
-      const top = topFor(roundIdx, matchIdx);
-      const left = roundIdx * (CARD_W + GAP_X);
-      posByMatchId.set(m.matchId, { roundIdx, matchIdx, top, left });
+      total[idx] += scores[seat] ?? 0;
+      ranksPerGame[gi][idx] = placeBySeatToRank(placeBySeat, seat);
     });
   });
 
-  // コンテナ高さ（QFの数を基準に確定）
-  const qfCount = roundMatches[0]?.length ?? 0;
-  const step = CARD_H + GAP_Y;
-  const height = qfCount > 0 ? (qfCount - 1) * step + CARD_H : 520;
-  const width = rounds.length * (CARD_W + GAP_X) - GAP_X + CARD_W;
+  // 「同点の扱い未定」なので winner 断定はしない（暫定表示）
+  const hasAnyResult = games.some((g) => !!safeScores(g.result));
+  const maxTotal = hasAnyResult ? Math.max(...total) : null;
+  const leaders =
+    maxTotal === null ? [] : total.map((v, i) => ({ v, i })).filter((x) => x.v === maxTotal);
 
-  // コネクタ生成（advance の fromSeat → toMatchId/toSeat）
-  const connectors: Array<{
-    key: string;
-    x1: number;
-    y1: number;
-    x2: number;
-    y2: number;
-  }> = [];
-
-  roundMatches.flat().forEach((m) => {
-    const srcPos = posByMatchId.get(m.matchId);
-    if (!srcPos) return;
-
-    (m.advance ?? []).forEach((a) => {
-      const dstPos = posByMatchId.get(a.toMatchId);
-      if (!dstPos) return;
-
-      const x1 = srcPos.left + CARD_W;
-      const y1 = srcPos.top + seatYWithinCard(a.fromSeat);
-
-      const x2 = dstPos.left;
-      const y2 = dstPos.top + seatYWithinCard(a.toSeat);
-
-      connectors.push({
-        key: `${m.matchId}:${a.fromSeat}->${a.toMatchId}:${a.toSeat}`,
-        x1,
-        y1,
-        x2,
-        y2,
-      });
-    });
-  });
+  const leaderNote =
+    !hasAnyResult
+      ? "結果が確定すると、ここに合計素点と暫定順位が表示されます。"
+      : leaders.length >= 2
+        ? "同点の可能性があります（同点時の扱いは未確定）。必要なら追加半荘が行われる可能性があります。"
+        : "暫定首位を表示しています（同点時・追加半荘の可能性あり）。";
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[980px]">
-        <div className="mb-12 flex items-center justify-between">
-          <div className="text-sm font-semibold">決勝トーナメント</div>
+    <div className={`${cardCls} p-4`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold">{match.title ?? "決勝"}</div>
+          <div className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+            半荘は複数戦（最大3戦の可能性あり）・合計素点で競います
+          </div>
         </div>
 
-        <div className="rounded-3xl border border-black/5 bg-white/50 p-3 shadow-sm dark:border-white/10 dark:bg-zinc-900/30">
-          {/* ここが「CSSの図」本体：カードは絶対配置、線は div で描画 */}
-          <div className="relative" style={{ width, height }}>
-            {/* 線（水平→垂直→水平） */}
-            {connectors.map((c) => {
-              const midX = Math.round((c.x1 + c.x2) / 2);
-              const left = Math.min(c.x1, c.x2);
-              const right = Math.max(c.x1, c.x2);
+        <Link
+          href={`/finals/matches/${encodeURIComponent(match.matchId)}`}
+          className="shrink-0 text-xs underline text-zinc-700 dark:text-zinc-300"
+        >
+          詳細 →
+        </Link>
+      </div>
 
-              const topY = Math.min(c.y1, c.y2);
-              const botY = Math.max(c.y1, c.y2);
+      <div className="mt-3 space-y-2">
+        {fixed.map((p, i) => {
+          const isLeader = hasAnyResult && total[i] === maxTotal;
 
+          const rankBadges = games.map((_, gi) => {
+            const r = ranksPerGame[gi]?.[i] ?? null;
+            if (!r) {
               return (
-                <div key={c.key} className="absolute inset-0 pointer-events-none">
-                  {/* 左水平 */}
-                  <div
-                    className="absolute bg-black/15 dark:bg-white/15"
-                    style={{
-                      left: c.x1,
-                      top: c.y1,
-                      width: midX - c.x1,
-                      height: 2,
-                    }}
-                  />
-                  {/* 垂直 */}
-                  <div
-                    className="absolute bg-black/15 dark:bg-white/15"
-                    style={{
-                      left: midX,
-                      top: topY,
-                      width: 2,
-                      height: botY - topY,
-                    }}
-                  />
-                  {/* 右水平 */}
-                  <div
-                    className="absolute bg-black/15 dark:bg-white/15"
-                    style={{
-                      left: midX,
-                      top: c.y2,
-                      width: c.x2 - midX,
-                      height: 2,
-                    }}
-                  />
-
-                  {/* 端点（小丸） */}
-                  <div
-                    className="absolute rounded-full bg-black/25 dark:bg-white/25"
-                    style={{
-                      left: c.x1 - 3,
-                      top: c.y1 - 3,
-                      width: 6,
-                      height: 6,
-                    }}
-                  />
-                  <div
-                    className="absolute rounded-full bg-black/25 dark:bg-white/25"
-                    style={{
-                      left: c.x2 - 3,
-                      top: c.y2 - 3,
-                      width: 6,
-                      height: 6,
-                    }}
-                  />
-                </div>
+                <span key={gi} className={`${pillCls} bg-zinc-50 text-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200`}>
+                  第{gi + 1}戦: —
+                </span>
               );
-            })}
+            }
+            return (
+              <span key={gi} className={`${pillCls} ${rankBadgeCls(r)}`}>
+                第{gi + 1}戦: {r}位
+              </span>
+            );
+          });
 
-            {/* カード */}
-            {roundMatches.flat().map((m) => {
-              const p = posByMatchId.get(m.matchId);
-              if (!p) return null;
-              return <MatchCard key={m.matchId} m={m} top={p.top} left={p.left} />;
-            })}
+          return (
+            <div key={`${p.playerId ?? "tbd"}-${i}`} className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <SeatRow
+                  seat={i}
+                  s={p}
+                  showWind={false} // 決勝は座順が変わり得るので明示しない
+                  badge={
+                    isLeader ? (
+                      <span className={`${pillCls} bg-sky-50 text-sky-900 dark:bg-sky-900/20 dark:text-sky-100`}>
+                        暫定首位
+                      </span>
+                    ) : null
+                  }
+                  right={
+                    hasAnyResult ? (
+                      <span className={`text-sm font-semibold tabular-nums ${scoreTone(total[i])}`}>
+                        合計 {total[i]}
+                      </span>
+                    ) : null
+                  }
+                />
 
-            {/* 列ラベル（上部） */}
-            <div className="absolute left-0 top-0 -translate-y-[40px] text-xs text-zinc-600 dark:text-zinc-400">
-              1回戦
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {rankBadges}
+                </div>
+              </div>
             </div>
-            {rounds.length > 1 ? (
-              <div
-                className="absolute top-0 -translate-y-[40px] text-xs text-zinc-600 dark:text-zinc-400"
-                style={{ left: 1 * (CARD_W + GAP_X) }}
-              >
-                準決勝
-              </div>
-            ) : null}
-            {rounds.length > 2 ? (
-              <div
-                className="absolute top-0 -translate-y-[40px] text-xs text-zinc-600 dark:text-zinc-400"
-                style={{ left: 2 * (CARD_W + GAP_X) }}
-              >
-                決勝
-              </div>
-            ) : null}
+          );
+        })}
+      </div>
+
+      <div className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">
+        {leaderNote}
+      </div>
+    </div>
+  );
+}
+
+function MatchCard({ match, isFinal }: { match: FinalsBracketMatch; isFinal: boolean }) {
+  if (isFinal) {
+    return <FinalsSeriesCard match={match} />;
+  }
+
+  const res = match.result ?? null;
+  const scores = safeScores(res);
+
+  // advance: fromSeat → toMatchId / toSeat
+  const advFrom = new Set<number>();
+  (match.advance ?? []).forEach((a) => {
+    if (typeof a?.fromSeat === "number") advFrom.add(a.fromSeat);
+  });
+
+  return (
+    <div className={`${cardCls} p-4`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold">{match.title ?? match.label}</div>
+          <div className="mt-1 flex flex-wrap gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+            <span className={pillCls}>{match.tableLabel}</span>
+            {match.status === "finished" ? (
+              <span className={`${pillCls} bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-100`}>
+                終了
+              </span>
+            ) : (
+              <span className={pillCls}>未確定</span>
+            )}
           </div>
         </div>
+
+        <Link
+          href={`/finals/matches/${encodeURIComponent(match.matchId)}`}
+          className="shrink-0 text-xs underline text-zinc-700 dark:text-zinc-300"
+        >
+          詳細 →
+        </Link>
       </div>
+
+      <div className="mt-3 space-y-2">
+        {(match.seats ?? []).map((s, seat) => {
+          const score = scores ? scores[seat] : null;
+          const place = placeBySeatToRank(res?.placeBySeat, seat);
+
+          const placeBadge =
+            place ? (
+              <span className={`${pillCls} ${rankBadgeCls(place)}`}>
+                {place}位
+              </span>
+            ) : null;
+
+          return (
+            <SeatRow
+              key={`${match.matchId}-${seat}-${s?.playerId ?? "tbd"}`}
+              seat={seat}
+              s={s}
+              showWind={true}
+              badge={
+                <div className="flex items-center gap-1.5">
+                  <AdvancementBadge active={advFrom.has(seat)} />
+                  {placeBadge}
+                </div>
+              }
+              right={
+                score !== null ? (
+                  <span className={`text-sm font-semibold tabular-nums ${scoreTone(score)}`}>
+                    {score}
+                  </span>
+                ) : null
+              }
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default function FinalsBracketView({ doc }: { doc?: FinalsBracketResponse }) {
+  if (!doc || !Array.isArray(doc.rounds)) {
+    return (
+      <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+        トーナメント情報を読み込み中です…
+      </div>
+    );
+  }
+  return (
+    <div className="mt-6 space-y-6">
+      {doc.rounds.map((r) => {
+        const isFinalRound = r.roundId === "F";
+
+        return (
+          <section key={r.roundId}>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-lg font-semibold">{r.label}</div>
+                <div className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                  {isFinalRound ? "合計素点で決着（同点・追加半荘の可能性あり）" : "勝ち上がり（進出者を強調）"}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-4 lg:grid-cols-2">
+              {r.matches.map((m) => (
+                <MatchCard key={m.matchId} match={m} isFinal={isFinalRound} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

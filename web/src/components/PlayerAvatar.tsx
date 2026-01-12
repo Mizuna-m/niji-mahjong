@@ -1,41 +1,62 @@
+// src/components/PlayerAvatar.tsx
 import Image from "next/image";
 
-function initials(name: string) {
-  const s = (name ?? "").trim();
-  if (!s) return "?";
-  return s.slice(0, 1).toUpperCase();
-}
+type Props = {
+  /** 表示名（未確定でもOK） */
+  name?: string | null;
+
+  /** 画像URL（どちらでも受ける） */
+  src?: string | null;
+  image?: string | null;
+
+  /** 呼び出し側互換用（使わないが受け取る） */
+  playerId?: string | null;
+
+  size?: number;
+  className?: string;
+};
 
 export default function PlayerAvatar({
   name,
   src,
-  size = 32,
-}: {
-  name: string;
-  src?: string | null;
-  size?: number;
-}) {
-  if (src) {
+  image,
+  size = 40,
+  className = "",
+}: Props) {
+  const url = src ?? image ?? "";
+  const label = name && name.trim() ? name : "未確定";
+
+  const baseCls =
+    "relative shrink-0 overflow-hidden rounded-full " +
+    "bg-zinc-200 dark:bg-zinc-800";
+
+  if (url) {
     return (
-      <Image
-        src={src}
-        alt={name}
-        width={size}
-        height={size}
-        unoptimized
-        className="rounded-full border border-black/10 object-cover dark:border-white/10"
-      />
+      <div
+        className={`${baseCls} ${className}`}
+        style={{ width: size, height: size }}
+        aria-label={label}
+        title={label}
+      >
+        <Image
+          src={url}
+          alt={label}
+          fill
+          sizes={`${size}px`}
+          className="object-cover"
+        />
+      </div>
     );
   }
 
   return (
     <div
-      className="grid place-items-center rounded-full border border-black/10 bg-zinc-100 text-[11px] font-semibold text-zinc-700 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-200"
+      className={`${baseCls} flex items-center justify-center text-[10px] text-zinc-600 dark:text-zinc-300 ${className}`}
       style={{ width: size, height: size }}
-      aria-label={name}
-      title={name}
+      aria-label={label}
+      title={label}
     >
-      {initials(name)}
+      {label.slice(0, 2)}
     </div>
   );
 }

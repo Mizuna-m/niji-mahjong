@@ -76,7 +76,7 @@ export default async function FinalsPage() {
         )}
       </div>
 
-      <FinalsBracketView bracket={bracket} />
+      <FinalsBracketView doc={bracket} />
 
       <div className="mt-4 text-xs text-zinc-600 dark:text-zinc-400">
         ※ 試合カードをタップすると詳細へ移動します。

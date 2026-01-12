@@ -10,6 +10,12 @@ const nextConfig = {
       },
     ];
   },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "www.nijisanji.jp", pathname: "/api/image-proxy" },
+      { protocol: "https", hostname: "images.microcms-assets.io", pathname: "/assets/**" },
+    ],
+  },
 };
 
 export default nextConfig;

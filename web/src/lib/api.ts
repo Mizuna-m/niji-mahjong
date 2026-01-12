@@ -89,7 +89,11 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 /** options を共通化 */
-type ApiOpts = { base?: string };
+export type ApiOpts = {
+  base?: string;
+  cache?: RequestCache;
+  next?: NextFetchRequestConfig;
+};
 
 /* =========================
  * Games
@@ -264,5 +268,19 @@ export async function fetchFinalsMatch(matchId: string, opts?: ApiOpts) {
 
   return fetchJson<FinalsMatchResponse>(
     buildUrl(base, `/api/tournament/finals/matches/${encodeURIComponent(matchId)}`)
+  );
+}
+
+/**
+ * 対局詳細（既存の /api/games/:uuid がある想定）
+ */
+export async function fetchGameDetail(gameUuid: string, opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
+  const id = String(gameUuid ?? "").trim();
+  if (!id) throw new Error("gameUuid is required");
+
+  return fetchJson<GameDetailResponse>(
+    buildUrl(base, `/api/games/${encodeURIComponent(id)}`),
+    { cache: opts?.cache, next: opts?.next }
   );
 }
