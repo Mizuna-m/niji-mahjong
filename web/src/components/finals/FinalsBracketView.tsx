@@ -239,9 +239,8 @@ export default function FinalsBracketView({ bracket }: { bracket: FinalsBracketR
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[980px]">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-12 flex items-center justify-between">
           <div className="text-sm font-semibold">決勝トーナメント</div>
-          <span className={`${pillCls} text-xs`}>進出者を強調表示</span>
         </div>
 
         <div className="rounded-3xl border border-black/5 bg-white/50 p-3 shadow-sm dark:border-white/10 dark:bg-zinc-900/30">
