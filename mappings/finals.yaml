@@ -1,27 +1,229 @@
-updatedAt: 2026-01-12T00:00:00.000Z
+updatedAt: 2026-01-12T17:50:00Z
 
 rounds:
+  - roundId: QF
+    label: 決勝トーナメント1回戦
+    matches:
+      - matchId: QF-1
+        label: 決勝トーナメント1回戦 第1試合
+        tableLabel: "QF-1"
+        gameUuid: "260112-423b72c1-cc10-4cfb-bed8-a188ec046c06"
+        seats:
+          - seat: 0
+            playerId: HoshikawaSara
+          - seat: 1
+            playerId: TogawaNonoha
+          - seat: 2
+            playerId: SukoyaKana
+          - seat: 3
+            playerId: ShiinaYuika
+        advance:
+          - fromSeat: 0
+            toMatchId: SF-9
+            toSeat: 0
+          - fromSeat: 2
+            toMatchId: SF-9
+            toSeat: 1
+      - matchId: QF-2
+        label: 決勝トーナメント1回戦 第2試合
+        tableLabel: "QF-2"
+        gameUuid: "260112-3015d32d-e442-455a-a4be-3ae02dede748"
+        seats:
+          - seat: 0
+            playerId: MorinakaKazaki
+          - seat: 1
+            playerId: NanaseSuzuna
+          - seat: 2
+            playerId: SakuraRitsuki
+          - seat: 3
+            playerId: LeviElipha
+        advance:
+          - fromSeat: 0
+            toMatchId: SF-9
+            toSeat: 3
+          - fromSeat: 2
+            toMatchId: SF-9
+            toSeat: 2
+      - matchId: QF-3
+        label: 決勝トーナメント1回戦 第3試合
+        tableLabel: "QF-3"
+        gameUuid: "260112-0e7cf335-7f72-4855-bd3c-2e4db44ef37a"
+        seats:
+          - seat: 0
+            playerId: GenzukiTojiro
+          - seat: 1
+            playerId: ShiorihaRuri
+          - seat: 2
+            playerId: Sophia_Valentine
+          - seat: 3
+            playerId: TodorokiKyoko
+        advance:
+          - fromSeat: 2
+            toMatchId: SF-10
+            toSeat: 1
+          - fromSeat: 3
+            toMatchId: SF-10
+            toSeat: 0
+      - matchId: QF-4
+        label: 決勝トーナメント1回戦 第4試合
+        tableLabel: "QF-4"
+        gameUuid: "260112-39961da3-7a1f-4c58-b451-10de1afc2fc2"
+        seats:
+          - seat: 0
+            playerId: LuisCammy
+          - seat: 1
+            playerId: EliConifer
+          - seat: 2
+            playerId: SakayoriSoma
+          - seat: 3
+            playerId: JoeRikiichi
+        advance:
+          - fromSeat: 3
+            toMatchId: SF-10
+            toSeat: 2
+          - fromSeat: 0
+            toMatchId: SF-10
+            toSeat: 3
+      - matchId: QF-5
+        label: 決勝トーナメント1回戦 第5試合
+        tableLabel: "QF-5"
+        gameUuid: "260112-fbf7cb39-76de-4b8e-b5f9-8db371f0d31a"
+        seats:
+          - seat: 0
+            playerId: RindouMikoto
+          - seat: 1
+            playerId: AizonoManami
+          - seat: 2
+            playerId: Ryushen
+          - seat: 3
+            playerId: YashiroKizuku
+        advance:
+          - fromSeat: 0
+            toMatchId: SF-11
+            toSeat: 1
+          - fromSeat: 2
+            toMatchId: SF-11
+            toSeat: 0
+      - matchId: QF-6
+        label: 決勝トーナメント1回戦 第6試合
+        tableLabel: "QF-6"
+        gameUuid: "260112-de9c199e-41e9-4bbb-863c-fba58246dc48"
+        seats:
+          - seat: 0
+            playerId: YukishiroMahiro
+          - seat: 1
+            playerId: SakakiNess
+          - seat: 2
+            playerId: ShishidoAkari
+          - seat: 3
+            playerId: KaidaHaru
+        advance:
+          - fromSeat: 1
+            toMatchId: SF-11
+            toSeat: 2
+          - fromSeat: 3
+            toMatchId: SF-11
+            toSeat: 3
+      - matchId: QF-7
+        label: 決勝トーナメント1回戦 第7試合
+        tableLabel: "QF-7"
+        gameUuid: "260112-da49e25e-b8f3-49e1-bce2-c74866831d22"
+        seats:
+          - seat: 0
+            playerId: AkagiWen
+          - seat: 1
+            playerId: ShigaRiko
+          - seat: 2
+            playerId: PontoNei
+          - seat: 3
+            playerId: AmamiyaKokoro
+        advance:
+          - fromSeat: 0
+            toMatchId: SF-12
+            toSeat: 1
+          - fromSeat: 3
+            toMatchId: SF-12
+            toSeat: 0
+      - matchId: QF-8
+        label: 決勝トーナメント1回戦 第8試合
+        tableLabel: "QF-8"
+        gameUuid: "260112-ca765082-03c3-4334-bab5-1fbc21a6df7c"
+        seats:
+          - seat: 0
+            playerId: HanaMacchia
+          - seat: 1
+            playerId: Lunlun_nijisanji
+          - seat: 2
+            playerId: HitotsubashiAyato
+          - seat: 3
+            playerId: MaimotoKeisuke
+        advance:
+          - fromSeat: 1
+            toMatchId: SF-12
+            toSeat: 2
+          - fromSeat: 0
+            toMatchId: SF-12
+            toSeat: 3
+
   - roundId: SF
     label: 準決勝
     matches:
-      - matchId: SF1
-        label: 準決勝 第1試合
-        tableLabel: "SF-1"
-        gameUuid: null   # 終わったら uuid を埋める（例: 250201-...）
+      - matchId: SF-9
+        label: 準決勝 1卓（第9試合）
+        tableLabel: "SF-9"
+        gameUuid: null
         seats:
           - seat: 0
-            source: "Q-A"
-            # playerId / nickname / source のいずれかを指定
+            playerId: HoshikawaSara
           - seat: 1
-            source: "Q-B"
+            playerId: SukoyaKana
           - seat: 2
-            source: "WC-1"
+            playerId: SakuraRitsuki
           - seat: 3
-            source: "WC-2"
-        advance:
-          - fromSeat: 0
-            toMatchId: F
-            toSeat: 0
+            playerId: MorinakaKazaki
+        # advance:
+        #   - fromSeat: 0
+        #     toMatchId: F
+        #     toSeat: 0
+      - matchId: SF-10
+        label: 準決勝 2卓（第10試合）
+        tableLabel: "SF-10"
+        gameUuid: null
+        seats:
+          - seat: 0
+            playerId: TodorokiKyoko
+          - seat: 1
+            playerId: Sophia_Valentine
+          - seat: 2
+            playerId: JoeRikiichi
+          - seat: 3
+            playerId: LuisCammy
+      - matchId: SF-11
+        label: 準決勝 3卓（第11試合）
+        tableLabel: "SF-11"
+        gameUuid: null
+        seats:
+          - seat: 0
+            playerId: Ryushen
+          - seat: 1
+            playerId: RindouMikoto
+          - seat: 2
+            playerId: SakakiNess
+          - seat: 3
+            playerId: KaidaHaru
+      - matchId: SF-12
+        label: 準決勝 4卓（第12試合）
+        tableLabel: "SF-12"
+        gameUuid: null
+        seats:
+          - seat: 0
+            playerId: AmamiyaKokoro
+          - seat: 1
+            playerId: AkagiWen
+          - seat: 2
+            playerId: Lunlun_nijisanji
+          - seat: 3
+            playerId: HanaMacchia
 
   - roundId: F
     label: 決勝
@@ -32,10 +234,10 @@ rounds:
         gameUuid: null
         seats:
           - seat: 0
-            source: "SF1-1st"
+            source: "SF-9-1st"
           - seat: 1
-            source: "SF2-1st"
+            source: "SF-10-1st"
           - seat: 2
-            source: "SF1-2nd"
+            source: "SF-11-1st"
           - seat: 3
-            source: "SF2-2nd"
+            source: "SF-12-1st"

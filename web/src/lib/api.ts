@@ -15,6 +15,12 @@ import type {
   WildcardResponse,
 } from "@/lib/types";
 
+import type {
+  FinalsBracketResponse,
+  FinalsMatchesResponse,
+  FinalsMatchResponse,
+} from "@/lib/typesTournament";
+
 /**
  * 実行環境ごとのベースURL戦略
  *
@@ -231,5 +237,32 @@ export async function fetchQualifierWinners(opts?: ApiOpts) {
   const base = opts?.base ?? defaultBase();
   return fetchJson<QualifierWinnersResponse>(
     buildUrl(base, "/api/tournament/qualifier/winners")
+  );
+}
+
+/* =========================
+ * Finals
+ * ========================= */
+
+export async function fetchFinalsBracket(opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
+  return fetchJson<FinalsBracketResponse>(
+    buildUrl(base, "/api/tournament/finals/bracket")
+  );
+}
+
+export async function fetchFinalsMatches(opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
+  return fetchJson<FinalsMatchesResponse>(
+    buildUrl(base, "/api/tournament/finals/matches")
+  );
+}
+
+export async function fetchFinalsMatch(matchId: string, opts?: ApiOpts) {
+  const base = opts?.base ?? defaultBase();
+  if (!matchId) throw new Error("matchId is required");
+
+  return fetchJson<FinalsMatchResponse>(
+    buildUrl(base, `/api/tournament/finals/matches/${encodeURIComponent(matchId)}`)
   );
 }

@@ -1,3 +1,4 @@
+// web/src/lib/format.ts
 export function fmtJst(epochSec?: number) {
   if (!epochSec) return "";
   return new Date(epochSec * 1000).toLocaleString("ja-JP", {
