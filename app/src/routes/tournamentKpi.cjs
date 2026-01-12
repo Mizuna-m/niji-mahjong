@@ -1,10 +1,49 @@
 // app/src/routes/tournamentKpi.cjs
 
-const { resolvePlayerByNickname } = require("../mappings/overlay.cjs");
+const {
+  resolvePlayerByNickname,
+  resolveTableByUuid,
+  applyGameOverride,
+} = require("../mappings/overlay.cjs");
 
 function safeNum(x) {
   const n = Number(x);
   return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * overlay（tables.yaml / overrides.yaml）から卓情報を組み立て
+ * tournament.cjs と同等のロジックを KPI 側にも持たせる（phase フィルタのため）
+ */
+function resolveGameMeta(uuid) {
+  const table = resolveTableByUuid(uuid); // {uuid,label,note} or null
+  const base = { uuid, table };
+  const merged = applyGameOverride(uuid, base);
+
+  const groupId =
+    merged?.groupId ??
+    merged?.table?.groupId ??
+    merged?.tournament?.groupId ??
+    null;
+
+  const phase =
+    merged?.phase ??
+    merged?.table?.phase ??
+    merged?.tournament?.phase ??
+    null;
+
+  const tableLabel =
+    merged?.tableLabel ??
+    merged?.table?.label ??
+    null;
+
+  const title =
+    merged?.title ??
+    merged?.table?.title ??
+    merged?.table?.label ??
+    (tableLabel || uuid);
+
+  return { phase, groupId, tableLabel, title, table: merged?.table ?? table };
 }
 
 /**
@@ -48,6 +87,7 @@ function mountTournamentKpiRoutes(app, { mongo }) {
   app.get("/api/tournament/kpi", async (req, res) => {
     const phase = String(req.query.phase || "qualifier");
 
+    // 現状は予選KPIのみ対応（finals は必要になったら同様に拡張）
     if (phase !== "qualifier") {
       return res.json({
         phase,
@@ -58,16 +98,39 @@ function mountTournamentKpiRoutes(app, { mongo }) {
     const GROUPS_TOTAL = 24;
     const WILDCARDS_SLOTS = 4;
 
+    // ★ uuid を必ず取る（overlayで phase/groupId を解決するため）
     const docs = await mongo.colDerived
-      .find({}, { projection: { _id: 0, players: 1, finalScores: 1 } })
+      .find(
+        {},
+        { projection: { _id: 0, uuid: 1, players: 1, finalScores: 1 } }
+      )
       .toArray();
 
-    const gamesPlayed = docs.length;
-
-    const groupWinners = []; // 確定通過
-    const wildcardPool = []; // 1位以外
-
+    // ★ 予選対象だけに絞る：
+    // - overlay で phase=qualifier と判定できるもの
+    // - かつ groupId があるもの（=予選グループ卓）
+    const qualifierDocs = [];
     for (const d of docs) {
+      const uuid = String(d?.uuid ?? "").trim();
+      if (!uuid) continue;
+
+      const meta = resolveGameMeta(uuid);
+
+      // phase が明示されていない卓は「予選扱い」にしない（混入防止のため）
+      if (meta?.phase !== "qualifier") continue;
+
+      // groupId が無いものは予選グループ卓ではない扱い（混入防止）
+      if (!meta?.groupId) continue;
+
+      qualifierDocs.push(d);
+    }
+
+    const gamesPlayed = qualifierDocs.length;
+
+    const groupWinners = []; // 確定通過（各卓1位）
+    const wildcardPool = []; // 1位以外（ワイルドカード候補）
+
+    for (const d of qualifierDocs) {
       const ranked = rankByScoreAndSeat(d.players, d.finalScores);
       if (ranked.length !== 4) continue;
 
@@ -89,7 +152,7 @@ function mountTournamentKpiRoutes(app, { mongo }) {
       }
     }
 
-    // ワイルドカード順位決定
+    // ワイルドカード順位決定（points desc、同点は席順）
     wildcardPool.sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       return a.seat - b.seat;
